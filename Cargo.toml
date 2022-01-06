@@ -1,0 +1,14 @@
+[package]
+name = "dragonglass"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["crates/*", "apps/*"]
+default-members = ["apps/*"]
+
+[dependencies]
+dragonglass_app = { path = "crates/dragonglass_app" }
+dragonglass_gui = { path = "crates/dragonglass_gui" }
+dragonglass_render = { path = "crates/dragonglass_render" }
+dragonglass_world = { path = "crates/dragonglass_world" }

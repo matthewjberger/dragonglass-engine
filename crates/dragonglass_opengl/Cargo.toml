@@ -1,0 +1,8 @@
+[package]
+authors = ["Matthew J. Berger <matthewberger@nevada.unr.edu>"]
+edition = "2018"
+name = "dragonglass_opengl"
+version = "0.1.0"
+
+[dependencies]
+dragonglass_dependencies = {path = "../dragonglass_dependencies"}

@@ -3,6 +3,7 @@ pub use bincode;
 pub use bmfont;
 pub use egui;
 pub use egui_winit_platform;
+pub use env_logger;
 pub use epi;
 pub use gl;
 pub use gltf;

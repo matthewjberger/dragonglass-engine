@@ -31,7 +31,7 @@ impl Renderer for OpenGLRenderDevice {
     ) -> Result<()> {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            gl::ClearColor(1.0, 0.0, 1.0, 1.0);
+            gl::ClearColor(0.3, 0.3, 0.3, 1.0);
         }
 
         let dimensions = context.window().inner_size();
@@ -43,6 +43,7 @@ impl Renderer for OpenGLRenderDevice {
         }
 
         context.swap_buffers()?;
+
         Ok(())
     }
 
@@ -60,9 +61,13 @@ impl Renderer for OpenGLRenderDevice {
         context: &ContextWrapper<PossiblyCurrent, Window>,
         dimensions: PhysicalSize<u32>,
     ) {
-        context.resize(dimensions);
         unsafe {
             gl::Viewport(0, 0, dimensions.width as _, dimensions.height as _);
         }
+        context.resize(dimensions);
+    }
+
+    fn cleanup(&mut self) {
+        self.world_render = None;
     }
 }

@@ -30,6 +30,7 @@ impl Viewport {
 }
 
 pub trait Renderer {
+    fn cleanup(&mut self);
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,

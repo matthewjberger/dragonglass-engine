@@ -1,44 +1,48 @@
-use std::path::PathBuf;
-
+use crate::{AppState, Input, System};
 use dragonglass_dependencies::{
     anyhow::Result,
-    egui::CtxRef,
     glutin::{
         dpi::PhysicalSize,
         event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
         event_loop::{ControlFlow, EventLoop},
-        window::{Window, WindowBuilder},
-        ContextBuilder, ContextWrapper, PossiblyCurrent,
+        window::WindowBuilder,
+        ContextBuilder,
     },
     winit::event::MouseButton,
 };
 use dragonglass_gui::{Gui, ScreenDescriptor};
-use dragonglass_render::{create_render_backend, Backend, Renderer};
+use dragonglass_render::{create_render_backend, Backend};
 use dragonglass_world::{load_gltf, World};
+use std::path::PathBuf;
 
 pub trait App {
-    fn initialize(&mut self) -> Result<()> {
+    fn initialize(&mut self, _world: &mut World) -> Result<()> {
         Ok(())
     }
-    fn update(&mut self) -> Result<()> {
+    fn update(&mut self, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
-    fn update_gui(&mut self, _context: CtxRef) -> Result<()> {
+    fn update_gui(&mut self, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
-    fn on_file_dropped(&mut self, _path: &PathBuf) -> Result<()> {
+    fn on_file_dropped(&mut self, _path: &PathBuf, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
     fn cleanup(&mut self) -> Result<()> {
         Ok(())
     }
-    fn on_mouse(&mut self, _button: &MouseButton, _state: &ElementState) -> Result<()> {
+    fn on_mouse(
+        &mut self,
+        _button: &MouseButton,
+        _button_state: &ElementState,
+        _app_state: &mut AppState,
+    ) -> Result<()> {
         Ok(())
     }
-    fn on_key(&mut self, _keycode: &VirtualKeyCode, _keystate: &ElementState) -> Result<()> {
+    fn on_key(&mut self, _input: KeyboardInput, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
-    fn handle_events(&mut self, _event: Event<()>) -> Result<()> {
+    fn handle_events(&mut self, _event: Event<()>, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
 }
@@ -68,76 +72,89 @@ pub fn run_application(mut app: impl App + 'static, title: &str) -> Result<()> {
     world.add_default_light()?;
 
     let mut renderer = create_render_backend(&Backend::OpenGL, &context, inner_size)?;
-    renderer.load_world(&world)?;
+    renderer.load_world(&mut world)?;
 
-    app.initialize()?;
+    let mut input = Input::default();
+    let mut system = System::new(inner_size);
+
+    app.initialize(&mut world)?;
 
     event_loop.run(move |event, _, control_flow| {
-        if let Err(error) = run_loop(
-            &mut context,
-            &mut app,
-            &mut world,
-            &mut gui,
-            &mut renderer,
-            event,
-            control_flow,
-        ) {
+        let state = AppState {
+            context: &mut context,
+            world: &mut world,
+            gui: &mut gui,
+            renderer: &mut renderer,
+            input: &mut input,
+            system: &mut system,
+        };
+        if let Err(error) = run_loop(&mut app, state, event, control_flow) {
             eprintln!("Application Error: {}", error);
         }
     });
 }
 
 fn run_loop(
-    context: &ContextWrapper<PossiblyCurrent, Window>,
     app: &mut impl App,
-    world: &mut World,
-    gui: &mut Gui,
-    renderer: &mut Box<dyn Renderer>,
+    mut app_state: AppState,
     event: Event<()>,
     control_flow: &mut ControlFlow,
 ) -> Result<()> {
     *control_flow = ControlFlow::Poll;
 
-    gui.handle_event(&event);
+    app_state.system.handle_event(&event);
+    app_state.gui.handle_event(&event);
+    let context = app_state.gui.context();
+    let using_gui = context.wants_pointer_input()
+        || context.wants_keyboard_input()
+        || context.is_using_pointer();
+    app_state
+        .input
+        .handle_event(&event, app_state.system.window_center());
+    app_state.input.allowed = !using_gui;
 
     match event {
-        Event::LoopDestroyed => app.cleanup()?,
         Event::WindowEvent { ref event, .. } => match event {
-            WindowEvent::DroppedFile(ref path) => app.on_file_dropped(path)?,
+            WindowEvent::DroppedFile(ref path) => app.on_file_dropped(path, &mut app_state)?,
             WindowEvent::Resized(physical_size) => {
-                renderer.resize(context, *physical_size);
+                app_state.renderer.resize(app_state.context, *physical_size);
             }
             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-            WindowEvent::MouseInput { button, state, .. } => app.on_mouse(button, state)?,
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state: keystate,
-                        virtual_keycode: Some(keycode),
-                        ..
-                    },
-                ..
-            } => {
-                if let (VirtualKeyCode::Escape, ElementState::Pressed) = (keycode, keystate) {
+            WindowEvent::MouseInput { button, state, .. } => {
+                app.on_mouse(button, state, &mut app_state)?
+            }
+            WindowEvent::KeyboardInput { input, .. } => {
+                if let (Some(VirtualKeyCode::Escape), ElementState::Pressed) =
+                    (input.virtual_keycode, input.state)
+                {
                     *control_flow = ControlFlow::Exit;
                 }
-                app.on_key(keycode, keystate)?;
+                app.on_key(*input, &mut app_state)?;
             }
             _ => (),
         },
         Event::MainEventsCleared => {
-            app.update()?;
+            app.update(&mut app_state)?;
+            app_state.world.tick(app_state.system.delta_time as f32)?;
 
-            let _frame_data = gui.start_frame(context.window().scale_factor() as _);
-            app.update_gui(gui.context())?;
-            let paint_jobs = gui.end_frame(context.window());
+            let _frame_data = app_state
+                .gui
+                .start_frame(app_state.context.window().scale_factor() as _);
+            app.update_gui(&mut app_state)?;
+            let paint_jobs = app_state.gui.end_frame(app_state.context.window());
 
-            renderer.render(context, world, &paint_jobs)?;
+            app_state
+                .renderer
+                .render(app_state.context, app_state.world, &paint_jobs)?;
+        }
+        Event::LoopDestroyed => {
+            app_state.renderer.cleanup();
+            app.cleanup()?;
         }
         _ => (),
     }
 
-    app.handle_events(event)?;
+    app.handle_events(event, &mut app_state)?;
 
     Ok(())
 }

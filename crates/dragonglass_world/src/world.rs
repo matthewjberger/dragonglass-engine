@@ -208,6 +208,8 @@ impl World {
         self.ecs.clear();
         self.scene.graphs.clear();
         self.textures.clear();
+        self.fonts.clear();
+        self.hdr_textures.clear();
         self.animations.clear();
         self.materials.clear();
         self.geometry.clear();

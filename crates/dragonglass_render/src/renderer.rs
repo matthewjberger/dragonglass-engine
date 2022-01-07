@@ -1,7 +1,7 @@
 use dragonglass_dependencies::{
     anyhow::Result,
     egui::ClippedMesh,
-    glutin::{window::Window, ContextWrapper, NotCurrent},
+    glutin::{window::Window, ContextWrapper, PossiblyCurrent},
     winit::dpi::PhysicalSize,
 };
 use dragonglass_world::World;
@@ -30,15 +30,23 @@ impl Viewport {
 }
 
 pub trait Renderer {
-    fn render(&mut self, paint_jobs: &[ClippedMesh]) -> Result<()>;
+    fn render(
+        &mut self,
+        context: &ContextWrapper<PossiblyCurrent, Window>,
+        paint_jobs: &[ClippedMesh],
+    ) -> Result<()>;
     fn load_world(&mut self, world: &World) -> Result<()>;
     fn set_viewport(&mut self, viewport: Viewport);
-    fn resize(&mut self, dimensions: PhysicalSize<u32>);
+    fn resize(
+        &mut self,
+        context: &ContextWrapper<PossiblyCurrent, Window>,
+        dimensions: PhysicalSize<u32>,
+    );
 }
 
 pub fn create_render_backend(
     backend: &Backend,
-    context: ContextWrapper<NotCurrent, Window>,
+    context: &ContextWrapper<PossiblyCurrent, Window>,
     dimensions: PhysicalSize<u32>,
 ) -> Result<Box<dyn Renderer>> {
     match backend {

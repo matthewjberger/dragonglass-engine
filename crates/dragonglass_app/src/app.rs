@@ -5,8 +5,8 @@ use dragonglass_dependencies::{
         dpi::PhysicalSize,
         event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
         event_loop::{ControlFlow, EventLoop},
-        window::WindowBuilder,
-        ContextBuilder,
+        window::{Window, WindowBuilder},
+        ContextBuilder, ContextWrapper, PossiblyCurrent,
     },
 };
 use dragonglass_gui::{Gui, ScreenDescriptor};
@@ -51,18 +51,28 @@ pub fn run_application(mut app: impl App + 'static, title: &str) -> Result<()> {
     };
     let mut gui = Gui::new(screen_descriptor);
 
-    let mut renderer = create_render_backend(&Backend::OpenGL, windowed_context, inner_size)?;
+    let mut context = unsafe { windowed_context.make_current().unwrap() };
+
+    let mut renderer = create_render_backend(&Backend::OpenGL, &context, inner_size)?;
 
     app.initialize()?;
 
     event_loop.run(move |event, _, control_flow| {
-        if let Err(error) = run_loop(&mut app, &mut gui, &mut renderer, event, control_flow) {
+        if let Err(error) = run_loop(
+            &mut context,
+            &mut app,
+            &mut gui,
+            &mut renderer,
+            event,
+            control_flow,
+        ) {
             eprintln!("Application Error: {}", error);
         }
     });
 }
 
 fn run_loop(
+    context: &ContextWrapper<PossiblyCurrent, Window>,
     app: &mut impl App,
     gui: &mut Gui,
     renderer: &mut Box<dyn Renderer>,
@@ -77,7 +87,7 @@ fn run_loop(
         Event::LoopDestroyed => app.cleanup()?,
         Event::WindowEvent { ref event, .. } => match event {
             WindowEvent::Resized(physical_size) => {
-                renderer.resize(*physical_size);
+                renderer.resize(context, *physical_size);
             }
             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
             WindowEvent::KeyboardInput {
@@ -99,11 +109,11 @@ fn run_loop(
         Event::MainEventsCleared => {
             app.update()?;
 
-            let _frame_data = gui.start_frame(1.0);
+            let _frame_data = gui.start_frame(context.window().scale_factor() as _);
             app.update_gui(gui.context())?;
-            let paint_jobs = gui.end_frame();
+            let paint_jobs = gui.end_frame(context.window());
 
-            renderer.render(&paint_jobs)?;
+            renderer.render(context, &paint_jobs)?;
         }
         _ => (),
     }

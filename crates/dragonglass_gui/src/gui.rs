@@ -74,8 +74,8 @@ impl Gui {
         }
     }
 
-    pub fn end_frame(&mut self) -> Vec<ClippedMesh> {
-        let (_output, paint_commands) = self.platform.end_frame(None);
+    pub fn end_frame(&mut self, window: &Window) -> Vec<ClippedMesh> {
+        let (_output, paint_commands) = self.platform.end_frame(Some(window));
         let frame_time = (Instant::now() - self.last_frame_start).as_secs_f64() as f32;
         self.previous_frame_time = Some(frame_time);
         self.platform.context().tessellate(paint_commands)

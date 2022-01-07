@@ -1,7 +1,8 @@
+use dragonglass_dependencies::rapier3d::prelude::{ImpulseJointSet, MultibodyJointSet};
 pub use dragonglass_dependencies::{
     rapier3d::{
         self,
-        dynamics::{CCDSolver, IntegrationParameters, JointSet, RigidBodySet},
+        dynamics::{CCDSolver, IntegrationParameters, RigidBodySet},
         geometry::{BroadPhase, ColliderSet, NarrowPhase},
         na::Vector3,
         pipeline::{PhysicsPipeline, QueryPipeline},
@@ -39,7 +40,9 @@ pub struct WorldPhysics {
     pub islands: IslandManager,
     pub bodies: RigidBodySet,
     pub colliders: ColliderSet,
-    pub joints: JointSet,
+    pub impulse_joints: ImpulseJointSet,
+    #[serde(skip, default = "MultibodyJointSet::new")]
+    pub multibody_joints: MultibodyJointSet,
     pub query_pipeline: QueryPipeline,
     pub ccd_solver: CCDSolver,
     #[serde(skip)]
@@ -62,7 +65,8 @@ impl WorldPhysics {
             islands: IslandManager::new(),
             bodies: RigidBodySet::new(),
             colliders: ColliderSet::new(),
-            joints: JointSet::new(),
+            impulse_joints: ImpulseJointSet::new(),
+            multibody_joints: MultibodyJointSet::new(),
             query_pipeline: QueryPipeline::default(),
             ccd_solver: CCDSolver::new(),
             pipeline: PhysicsPipeline::new(),
@@ -83,7 +87,8 @@ impl WorldPhysics {
             &mut self.narrow_phase,
             &mut self.bodies,
             &mut self.colliders,
-            &mut self.joints,
+            &mut self.impulse_joints,
+            &mut self.multibody_joints,
             &mut self.ccd_solver,
             &(),
             &event_handler,

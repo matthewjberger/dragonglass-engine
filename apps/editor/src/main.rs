@@ -1,7 +1,6 @@
 use dragonglass::{
     app::{run_application, App},
     dependencies::{
-        self,
         anyhow::Result,
         winit::event::{ElementState, Event, VirtualKeyCode},
     },
@@ -27,7 +26,7 @@ impl App for Editor {
         Ok(())
     }
 
-    fn handle_events(&mut self, _event: Event<()>) -> dependencies::anyhow::Result<()> {
+    fn handle_events(&mut self, _event: Event<()>) -> Result<()> {
         Ok(())
     }
 }

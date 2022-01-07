@@ -5,7 +5,7 @@ use dragonglass_dependencies::{
 };
 use dragonglass_world::World;
 
-use crate::opengl::OpenGLRenderBackend;
+use crate::opengl::OpenGLRenderDevice;
 
 pub enum Backend {
     OpenGL,
@@ -42,7 +42,7 @@ pub fn create_render_backend(
 ) -> Result<Box<dyn Renderer>> {
     match backend {
         Backend::OpenGL => {
-            let backend = OpenGLRenderBackend::new(context, dimensions)?;
+            let backend = OpenGLRenderDevice::new(context, dimensions)?;
             Ok(Box::new(backend) as Box<dyn Renderer>)
         }
     }

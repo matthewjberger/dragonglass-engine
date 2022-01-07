@@ -2,13 +2,12 @@ use dragonglass_dependencies::{
     egui::{ClippedMesh, CtxRef, FontDefinitions},
     egui_winit_platform::{Platform, PlatformDescriptor},
     epi,
-    winit::{event::Event, window::Window},
+    winit::{dpi::PhysicalSize, event::Event, window::Window},
 };
 use std::{sync::Arc, time::Instant};
 
 pub struct ScreenDescriptor {
-    pub width: u32,
-    pub height: u32,
+    pub dimensions: PhysicalSize<u32>,
     pub scale_factor: f32,
 }
 
@@ -29,8 +28,8 @@ pub struct Gui {
 impl Gui {
     pub fn new(screen_descriptor: ScreenDescriptor) -> Self {
         let platform = Platform::new(PlatformDescriptor {
-            physical_width: screen_descriptor.width,
-            physical_height: screen_descriptor.height,
+            physical_width: screen_descriptor.dimensions.width,
+            physical_height: screen_descriptor.dimensions.height,
             scale_factor: screen_descriptor.scale_factor as _,
             font_definitions: FontDefinitions::default(),
             style: Default::default(),
@@ -75,8 +74,8 @@ impl Gui {
         }
     }
 
-    pub fn end_frame(&mut self, window: &Window) -> Vec<ClippedMesh> {
-        let (_output, paint_commands) = self.platform.end_frame(Some(&window));
+    pub fn end_frame(&mut self) -> Vec<ClippedMesh> {
+        let (_output, paint_commands) = self.platform.end_frame(None);
         let frame_time = (Instant::now() - self.last_frame_start).as_secs_f64() as f32;
         self.previous_frame_time = Some(frame_time);
         self.platform.context().tessellate(paint_commands)

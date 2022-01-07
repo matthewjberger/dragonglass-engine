@@ -1,5 +1,6 @@
 use dragonglass_dependencies::{
     anyhow::Result,
+    egui::ClippedMesh,
     glutin::{window::Window, ContextWrapper, NotCurrent},
     winit::dpi::PhysicalSize,
 };
@@ -29,7 +30,7 @@ impl Viewport {
 }
 
 pub trait Renderer {
-    fn render(&mut self) -> Result<()>;
+    fn render(&mut self, paint_jobs: &[ClippedMesh]) -> Result<()>;
     fn load_world(&mut self, world: &World) -> Result<()>;
     fn set_viewport(&mut self, viewport: Viewport);
     fn resize(&mut self, dimensions: PhysicalSize<u32>);

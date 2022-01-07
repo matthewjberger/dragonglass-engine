@@ -1,5 +1,6 @@
 use dragonglass_dependencies::{
     anyhow::Result,
+    egui::ClippedMesh,
     gl,
     glutin::{window::Window, ContextWrapper, NotCurrent, PossiblyCurrent},
     winit::dpi::PhysicalSize,
@@ -23,7 +24,7 @@ impl OpenGLRenderDevice {
 }
 
 impl Renderer for OpenGLRenderDevice {
-    fn render(&mut self) -> Result<()> {
+    fn render(&mut self, _paint_jobs: &[ClippedMesh]) -> Result<()> {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(1.0, 0.0, 1.0, 1.0);

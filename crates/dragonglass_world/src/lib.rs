@@ -2,7 +2,7 @@ mod gltf;
 mod physics;
 mod world;
 
-pub use self::{physics::*, world::*};
+pub use self::{gltf::*, physics::*, world::*};
 
 use dragonglass_dependencies::serde::{Deserialize, Serialize};
 

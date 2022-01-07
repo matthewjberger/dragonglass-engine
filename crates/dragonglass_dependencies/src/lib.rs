@@ -1,6 +1,9 @@
 pub use anyhow;
 pub use bincode;
 pub use bmfont;
+pub use egui;
+pub use egui_winit_platform;
+pub use epi;
 pub use gltf;
 pub use image;
 pub use lazy_static;
@@ -11,3 +14,4 @@ pub use nalgebra_glm;
 pub use petgraph;
 pub use rapier3d;
 pub use serde;
+pub use winit;

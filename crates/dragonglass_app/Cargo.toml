@@ -7,3 +7,4 @@ version = "0.1.0"
 dragonglass_dependencies = {path = "../dragonglass_dependencies"}
 dragonglass_gui = {path = "../dragonglass_gui"}
 dragonglass_render = {path = "../dragonglass_render"}
+dragonglass_world = {path = "../dragonglass_world"}

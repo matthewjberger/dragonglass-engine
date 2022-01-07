@@ -33,6 +33,7 @@ pub trait Renderer {
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,
+        world: &World,
         paint_jobs: &[ClippedMesh],
     ) -> Result<()>;
     fn load_world(&mut self, world: &World) -> Result<()>;

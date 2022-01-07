@@ -4,7 +4,7 @@ mod world;
 
 pub use self::{gltf::*, physics::*, world::*};
 
-use dragonglass_dependencies::serde::{Deserialize, Serialize};
+pub use dragonglass_dependencies::legion::EntityStore;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "dragonglass_dependencies::serde")]

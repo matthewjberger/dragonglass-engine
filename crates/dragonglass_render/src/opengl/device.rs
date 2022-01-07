@@ -1,3 +1,4 @@
+use crate::{opengl::world::WorldRender, Renderer};
 use dragonglass_dependencies::{
     anyhow::Result,
     egui::ClippedMesh,
@@ -5,10 +6,11 @@ use dragonglass_dependencies::{
     glutin::{window::Window, ContextWrapper, PossiblyCurrent},
     winit::dpi::PhysicalSize,
 };
+use dragonglass_world::World;
 
-use crate::Renderer;
-
-pub struct OpenGLRenderDevice;
+pub struct OpenGLRenderDevice {
+    world_render: Option<WorldRender>,
+}
 
 impl OpenGLRenderDevice {
     pub fn new(
@@ -16,7 +18,7 @@ impl OpenGLRenderDevice {
         _dimensions: PhysicalSize<u32>,
     ) -> Result<Self> {
         gl::load_with(|symbol| context.get_proc_address(symbol) as *const _);
-        Ok(Self {})
+        Ok(Self { world_render: None })
     }
 }
 
@@ -24,21 +26,29 @@ impl Renderer for OpenGLRenderDevice {
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,
+        world: &World,
         _paint_jobs: &[ClippedMesh],
     ) -> Result<()> {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(1.0, 0.0, 1.0, 1.0);
         }
+
+        let dimensions = context.window().inner_size();
+        let aspect_ratio =
+            dimensions.width as f32 / std::cmp::max(dimensions.height as u32, 1) as f32;
+
+        if let Some(world_render) = self.world_render.as_ref() {
+            world_render.render(world, aspect_ratio)?;
+        }
+
         context.swap_buffers()?;
         Ok(())
     }
 
-    fn load_world(
-        &mut self,
-        _world: &dragonglass_world::World,
-    ) -> dragonglass_dependencies::anyhow::Result<()> {
-        todo!()
+    fn load_world(&mut self, world: &World) -> Result<()> {
+        self.world_render = Some(WorldRender::new(world)?);
+        Ok(())
     }
 
     fn set_viewport(&mut self, _viewport: crate::renderer::Viewport) {

@@ -1,5 +1,5 @@
 use dragonglass_dependencies::{
-    egui::{ClippedMesh, CtxRef, FontDefinitions},
+    egui::{epaint::ClippedShape, CtxRef, FontDefinitions},
     egui_winit_platform::{Platform, PlatformDescriptor},
     epi,
     winit::{dpi::PhysicalSize, event::Event, window::Window},
@@ -44,6 +44,10 @@ impl Gui {
         }
     }
 
+    pub fn captures_event(&self, event: &Event<()>) -> bool {
+        self.platform.captures_event(event)
+    }
+
     pub fn handle_event(&mut self, event: &Event<()>) {
         self.platform.handle_event(&event);
     }
@@ -74,10 +78,10 @@ impl Gui {
         }
     }
 
-    pub fn end_frame(&mut self, window: &Window) -> Vec<ClippedMesh> {
-        let (_output, paint_commands) = self.platform.end_frame(Some(window));
+    pub fn end_frame(&mut self, window: &Window) -> Vec<ClippedShape> {
+        let (_output, clipped_shapes) = self.platform.end_frame(Some(window));
         let frame_time = (Instant::now() - self.last_frame_start).as_secs_f64() as f32;
         self.previous_frame_time = Some(frame_time);
-        self.platform.context().tessellate(paint_commands)
+        clipped_shapes
     }
 }

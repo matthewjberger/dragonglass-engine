@@ -1,6 +1,6 @@
 use dragonglass_dependencies::{
     anyhow::Result,
-    egui::ClippedMesh,
+    egui::{epaint::ClippedShape, CtxRef},
     glutin::{window::Window, ContextWrapper, PossiblyCurrent},
     winit::dpi::PhysicalSize,
 };
@@ -34,8 +34,9 @@ pub trait Renderer {
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,
+        gui_context: &CtxRef,
         world: &World,
-        paint_jobs: &[ClippedMesh],
+        clipped_shapes: Vec<ClippedShape>,
     ) -> Result<()>;
     fn load_world(&mut self, world: &World) -> Result<()>;
     fn set_viewport(&mut self, viewport: Viewport);

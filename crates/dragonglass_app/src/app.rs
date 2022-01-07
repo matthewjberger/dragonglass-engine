@@ -3,12 +3,11 @@ use dragonglass_dependencies::{
     anyhow::Result,
     glutin::{
         dpi::PhysicalSize,
-        event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+        event::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
         event_loop::{ControlFlow, EventLoop},
         window::WindowBuilder,
         ContextBuilder,
     },
-    winit::event::MouseButton,
 };
 use dragonglass_gui::{Gui, ScreenDescriptor};
 use dragonglass_render::{create_render_backend, Backend};
@@ -42,7 +41,7 @@ pub trait App {
     fn on_key(&mut self, _input: KeyboardInput, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
-    fn handle_events(&mut self, _event: Event<()>, _app_state: &mut AppState) -> Result<()> {
+    fn handle_events(&mut self, _event: &Event<()>, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
 }
@@ -102,16 +101,14 @@ fn run_loop(
 ) -> Result<()> {
     *control_flow = ControlFlow::Poll;
 
-    app_state.system.handle_event(&event);
     app_state.gui.handle_event(&event);
-    let context = app_state.gui.context();
-    let using_gui = context.wants_pointer_input()
-        || context.wants_keyboard_input()
-        || context.is_using_pointer();
-    app_state
-        .input
-        .handle_event(&event, app_state.system.window_center());
-    app_state.input.allowed = !using_gui;
+    if !app_state.gui.captures_event(&event) {
+        app.handle_events(&event, &mut app_state)?;
+        app_state.system.handle_event(&event);
+        app_state
+            .input
+            .handle_event(&event, app_state.system.window_center());
+    }
 
     match event {
         Event::WindowEvent { ref event, .. } => match event {
@@ -141,11 +138,14 @@ fn run_loop(
                 .gui
                 .start_frame(app_state.context.window().scale_factor() as _);
             app.update_gui(&mut app_state)?;
-            let paint_jobs = app_state.gui.end_frame(app_state.context.window());
+            let clipped_shapes = app_state.gui.end_frame(app_state.context.window());
 
-            app_state
-                .renderer
-                .render(app_state.context, app_state.world, &paint_jobs)?;
+            app_state.renderer.render(
+                app_state.context,
+                &app_state.gui.context(),
+                app_state.world,
+                clipped_shapes,
+            )?;
         }
         Event::LoopDestroyed => {
             app_state.renderer.cleanup();
@@ -153,8 +153,6 @@ fn run_loop(
         }
         _ => (),
     }
-
-    app.handle_events(event, &mut app_state)?;
 
     Ok(())
 }

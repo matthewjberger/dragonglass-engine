@@ -1,6 +1,11 @@
 use dragonglass::{
     app::{run_application, App, AppState, MouseOrbit},
-    dependencies::{anyhow::Result, env_logger, log},
+    dependencies::{
+        anyhow::Result,
+        egui::{self, Id, LayerId, Ui},
+        env_logger, log,
+    },
+    render::Viewport,
     world::load_gltf,
 };
 
@@ -20,6 +25,62 @@ impl App for Editor {
             let camera_entity = app_state.world.active_camera()?;
             self.camera.update(app_state, camera_entity)?;
         }
+        Ok(())
+    }
+
+    fn update_gui(&mut self, app_state: &mut AppState) -> Result<()> {
+        let ctx = &app_state.gui.context();
+
+        egui::TopBottomPanel::top("top_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                egui::menu::bar(ui, |ui| {});
+            });
+
+        egui::SidePanel::left("left_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                ui.heading("Left Panel");
+                ui.allocate_space(ui.available_size());
+            });
+
+        egui::SidePanel::right("right_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                ui.heading("Right Panel");
+                ui.allocate_space(ui.available_size());
+            });
+
+        egui::TopBottomPanel::bottom("bottom_panel")
+            .resizable(true)
+            .show(ctx, |ui| {
+                ui.heading("Bottom Panel");
+                ui.allocate_space(ui.available_size());
+            });
+
+        // Calculate the rect needed for rendering
+        let viewport = Ui::new(
+            ctx.clone(),
+            LayerId::background(),
+            Id::new("central_panel"),
+            ctx.available_rect(),
+            ctx.input().screen_rect(),
+        )
+        .max_rect();
+
+        let dimensions = app_state.context.window().inner_size();
+        let offset = dimensions.height as f32 - viewport.max.y;
+        app_state.renderer.set_viewport(Viewport {
+            x: viewport.min.x,
+            y: viewport.min.y,
+            width: viewport.width(),
+            height: viewport.height(),
+            min_depth: -1.0,
+            max_depth: 1.0,
+        });
+
+        log::info!("viewport: {:?}", viewport);
+
         Ok(())
     }
 

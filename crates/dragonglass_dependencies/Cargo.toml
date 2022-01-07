@@ -1,23 +1,26 @@
 [package]
+edition = "2021"
 name = "dragonglass_dependencies"
 version = "0.1.0"
-edition = "2021"
 
 [dependencies]
 anyhow = "1.0.52"
 bincode = "1.3.3"
-bmfont = { version = "0.3.3", features = ["serde"] }
+bmfont = {version = "0.3.3", features = ["serde"]}
 egui = "0.16.1"
 egui_winit_platform = "0.13.0"
 epi = "0.16.0"
-gltf = { version = "0.16.0", features = ["names", "KHR_lights_punctual", "KHR_materials_unlit"] }
+gl = "0.14.0"
+gltf = {version = "0.16.0", features = ["names", "KHR_lights_punctual", "KHR_materials_unlit"]}
+glutin = "0.28.0"
 image = "0.23.14"
 lazy_static = "1.4.0"
-legion = { version = "0.4.0", features = ["wasm-bindgen"] }
+legion = {version = "0.4.0", features = ["wasm-bindgen"]}
 log = "0.4.14"
 nalgebra = "0.29.0"
-nalgebra-glm = { version = "0.15.0", features = ["serde-serialize"] }
-petgraph = { version = "0.6.0", features = ["serde-1"] }
-rapier3d = { version = "0.11.1", features = ["serde-serialize", "wasm-bindgen"] }
+nalgebra-glm = {version = "0.15.0", features = ["serde-serialize"]}
+petgraph = {version = "0.6.0", features = ["serde-1"]}
+rapier3d = {version = "0.11.1", features = ["serde-serialize", "wasm-bindgen"]}
+raw-window-handle = "0.4.2"
 serde = "1.0.132"
 winit = "0.26.0"

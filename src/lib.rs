@@ -13,3 +13,7 @@ pub mod render {
 pub mod world {
     pub use dragonglass_world::*;
 }
+
+pub mod dependencies {
+    pub use dragonglass_dependencies::*;
+}

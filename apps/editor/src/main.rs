@@ -3,11 +3,13 @@ use dragonglass::{
     dependencies::{
         anyhow::Result,
         egui::{self, Id, LayerId, Ui},
-        env_logger, log,
+        env_logger,
+        legion::IntoQuery,
+        log,
         winit::event::{ElementState, KeyboardInput, VirtualKeyCode},
     },
     render::Viewport,
-    world::load_gltf,
+    world::{load_gltf, Camera, Entity},
 };
 
 #[derive(Default)]
@@ -27,6 +29,13 @@ impl App for Editor {
             let camera_entity = app_state.world.active_camera()?;
             self.camera.update(app_state, camera_entity)?;
         }
+
+        if !app_state.world.animations.is_empty() {
+            app_state
+                .world
+                .animate(0, 0.75 * app_state.system.delta_time as f32)?;
+        }
+
         Ok(())
     }
 
@@ -123,6 +132,14 @@ impl App for Editor {
         {
             app_state.world.clear()?;
         }
+
+        if input.virtual_keycode == Some(VirtualKeyCode::Space) {
+            let mut query = <(Entity, &mut Camera)>::query();
+            for (index, (_entity, camera)) in query.iter_mut(&mut app_state.world.ecs).enumerate() {
+                camera.enabled = index == 7;
+            }
+        }
+
         Ok(())
     }
 }

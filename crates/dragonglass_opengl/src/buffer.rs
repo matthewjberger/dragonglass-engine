@@ -77,15 +77,3 @@ impl GeometryBuffer {
         }
     }
 }
-
-impl Drop for GeometryBuffer {
-    fn drop(&mut self) {
-        unsafe {
-            gl::DeleteVertexArrays(1, self.vao as _);
-            gl::DeleteBuffers(1, self.vbo as _);
-            if let Some(ebo) = self.ebo.as_ref() {
-                gl::DeleteBuffers(1, ebo as _);
-            }
-        }
-    }
-}

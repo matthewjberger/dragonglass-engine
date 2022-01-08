@@ -67,11 +67,8 @@ pub fn run_application(mut app: impl App + 'static, title: &str) -> Result<()> {
     let mut context = unsafe { windowed_context.make_current().unwrap() };
 
     let mut world = World::new()?;
-    load_gltf("assets/models/DamagedHelmet.glb", &mut world)?;
-    world.add_default_light()?;
 
     let mut renderer = create_render_backend(&Backend::OpenGL, &context, inner_size)?;
-    renderer.load_world(&mut world)?;
 
     let mut input = Input::default();
     let mut system = System::new(inner_size);

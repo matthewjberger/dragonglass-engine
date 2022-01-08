@@ -4,6 +4,7 @@ use dragonglass::{
         anyhow::Result,
         egui::{self, Id, LayerId, Ui},
         env_logger, log,
+        winit::event::{ElementState, KeyboardInput, VirtualKeyCode},
     },
     render::Viewport,
     world::load_gltf,
@@ -17,7 +18,8 @@ struct Editor {
 impl App for Editor {
     fn initialize(&mut self, world: &mut dragonglass::world::World) -> Result<()> {
         env_logger::init();
-        world.add_default_light()
+        world.add_default_light()?;
+        Ok(())
     }
 
     fn update(&mut self, app_state: &mut AppState) -> Result<()> {
@@ -98,6 +100,7 @@ impl App for Editor {
             match extension.to_str() {
                 Some("glb") | Some("gltf") => {
                     load_gltf(raw_path, app_state.world)?;
+                    app_state.world.add_default_light()?;
                     app_state.renderer.load_world(app_state.world)?;
                 }
                 // Some("hdr") => Self::load_hdr(raw_path, application)?,
@@ -112,6 +115,14 @@ impl App for Editor {
             }
         }
 
+        Ok(())
+    }
+
+    fn on_key(&mut self, input: KeyboardInput, app_state: &mut AppState) -> Result<()> {
+        if input.virtual_keycode == Some(VirtualKeyCode::C) && input.state == ElementState::Pressed
+        {
+            app_state.world.clear()?;
+        }
         Ok(())
     }
 }

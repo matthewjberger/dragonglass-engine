@@ -2,7 +2,7 @@ use dragonglass::{
     app::{run_application, App, AppState, MouseOrbit},
     dependencies::{
         anyhow::Result,
-        egui::{self, Id, LayerId, Ui},
+        egui::{self, global_dark_light_mode_switch, Id, LayerId, Ui},
         env_logger, log,
         winit::event::{ElementState, KeyboardInput, VirtualKeyCode},
     },
@@ -42,7 +42,9 @@ impl App for Editor {
         egui::TopBottomPanel::top("top_panel")
             .resizable(true)
             .show(ctx, |ui| {
-                egui::menu::bar(ui, |_ui| {});
+                egui::menu::bar(ui, |ui| {
+                    global_dark_light_mode_switch(ui);
+                });
             });
 
         egui::SidePanel::left("left_panel")

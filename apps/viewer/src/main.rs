@@ -13,11 +13,11 @@ use dragonglass::{
 };
 
 #[derive(Default)]
-struct Editor {
+struct Viewer {
     camera: MouseOrbit,
 }
 
-impl App for Editor {
+impl App for Viewer {
     fn initialize(&mut self, world: &mut dragonglass::world::World) -> Result<()> {
         env_logger::init();
         world.add_default_light()?;
@@ -52,20 +52,6 @@ impl App for Editor {
             .resizable(true)
             .show(ctx, |ui| {
                 ui.heading("Left Panel");
-                ui.allocate_space(ui.available_size());
-            });
-
-        egui::SidePanel::right("right_panel")
-            .resizable(true)
-            .show(ctx, |ui| {
-                ui.heading("Right Panel");
-                ui.allocate_space(ui.available_size());
-            });
-
-        egui::TopBottomPanel::bottom("bottom_panel")
-            .resizable(true)
-            .show(ctx, |ui| {
-                ui.heading("Bottom Panel");
                 ui.allocate_space(ui.available_size());
             });
 
@@ -133,10 +119,17 @@ impl App for Editor {
             app_state.world.clear()?;
         }
 
+        if input.virtual_keycode == Some(VirtualKeyCode::Space) {
+            let mut query = <(Entity, &mut Camera)>::query();
+            for (index, (_entity, camera)) in query.iter_mut(&mut app_state.world.ecs).enumerate() {
+                camera.enabled = index == 7;
+            }
+        }
+
         Ok(())
     }
 }
 
 fn main() -> Result<()> {
-    run_application(Editor::default(), "Dragonglass Editor")
+    run_application(Viewer::default(), "Dragonglass Viewer")
 }

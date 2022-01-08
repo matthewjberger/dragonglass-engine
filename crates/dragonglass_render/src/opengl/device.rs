@@ -1,4 +1,4 @@
-use crate::{opengl::world::WorldRender, Renderer, Viewport};
+use crate::{opengl::world::WorldRender, Renderer};
 use dragonglass_dependencies::{
     anyhow::Result,
     egui::{epaint::ClippedShape, CtxRef},
@@ -6,7 +6,7 @@ use dragonglass_dependencies::{
     glutin::{window::Window, ContextWrapper, PossiblyCurrent},
     winit::dpi::PhysicalSize,
 };
-use dragonglass_world::World;
+use dragonglass_world::{Viewport, World};
 
 pub struct OpenGLRenderDevice {
     world_render: Option<WorldRender>,

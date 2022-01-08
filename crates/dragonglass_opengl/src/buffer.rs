@@ -3,8 +3,8 @@ use std::mem;
 
 pub struct GeometryBuffer {
     vao: u32,
-    vbo: u32,
-    ebo: Option<u32>,
+    _vbo: u32,
+    _ebo: Option<u32>,
 }
 
 impl GeometryBuffer {
@@ -23,7 +23,11 @@ impl GeometryBuffer {
 
         Self::add_vertex_attributes::<T>(vertex_attributes);
 
-        Self { vao, vbo, ebo }
+        Self {
+            vao,
+            _vbo: vbo,
+            _ebo: ebo,
+        }
     }
 
     fn create_vao() -> u32 {

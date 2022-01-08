@@ -4,29 +4,12 @@ use dragonglass_dependencies::{
     glutin::{window::Window, ContextWrapper, PossiblyCurrent},
     winit::dpi::PhysicalSize,
 };
-use dragonglass_world::World;
+use dragonglass_world::{Viewport, World};
 
 use crate::opengl::OpenGLRenderDevice;
 
 pub enum Backend {
     OpenGL,
-}
-
-#[derive(Default)]
-pub struct Viewport {
-    pub x: f32,
-    pub y: f32,
-    pub width: f32,
-    pub height: f32,
-    pub min_depth: f32,
-    pub max_depth: f32,
-}
-
-impl Viewport {
-    pub fn aspect_ratio(&self) -> f32 {
-        let height = if self.height > 0.0 { self.height } else { 1.0 };
-        self.width / height
-    }
 }
 
 pub trait Renderer {

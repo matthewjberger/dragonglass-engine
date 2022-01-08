@@ -8,8 +8,7 @@ use dragonglass::{
         log,
         winit::event::{ElementState, KeyboardInput, VirtualKeyCode},
     },
-    render::Viewport,
-    world::{load_gltf, Camera, Entity},
+    world::{load_gltf, Camera, Entity, Viewport},
 };
 
 #[derive(Default)]
@@ -45,7 +44,7 @@ impl App for Viewer {
         egui::TopBottomPanel::top("top_panel")
             .resizable(true)
             .show(ctx, |ui| {
-                egui::menu::bar(ui, |ui| {});
+                egui::menu::bar(ui, |_ui| {});
             });
 
         egui::SidePanel::left("left_panel")
@@ -66,7 +65,7 @@ impl App for Viewer {
         .max_rect();
 
         let dimensions = app_state.context.window().inner_size();
-        let offset = dimensions.height as f32 - viewport.max.y;
+        let _offset = dimensions.height as f32 - viewport.max.y;
         app_state.renderer.set_viewport(Viewport {
             x: viewport.min.x,
             y: viewport.min.y,
@@ -75,8 +74,6 @@ impl App for Viewer {
             min_depth: -1.0,
             max_depth: 1.0,
         });
-
-        log::info!("viewport: {:?}", viewport);
 
         Ok(())
     }

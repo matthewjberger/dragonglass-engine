@@ -11,7 +11,7 @@ use dragonglass_dependencies::{
 };
 use dragonglass_gui::{Gui, ScreenDescriptor};
 use dragonglass_render::{create_render_backend, Backend};
-use dragonglass_world::{load_gltf, World};
+use dragonglass_world::World;
 use std::path::PathBuf;
 
 pub trait App {

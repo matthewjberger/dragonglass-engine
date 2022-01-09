@@ -54,6 +54,12 @@ impl Light {
     }
 }
 
+pub trait WorldShader {
+    fn update(&self, world: &World, aspect_ratio: f32) -> Result<()>;
+    fn update_model_matrix(&self, model_matrix: glm::Mat4);
+    fn update_material(&self, material: &Material, textures: &[Texture]) -> Result<()>;
+}
+
 pub struct WorldRender {
     pub geometry: GeometryBuffer,
     pub textures: Vec<Texture>,

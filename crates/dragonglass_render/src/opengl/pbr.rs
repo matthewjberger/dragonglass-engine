@@ -6,6 +6,8 @@ use dragonglass_dependencies::{
 use dragonglass_opengl::{ShaderProgram, Texture};
 use dragonglass_world::{Material, World};
 
+use super::world::WorldShader;
+
 pub struct PbrShaderProgram {
     shader_program: ShaderProgram,
 }
@@ -18,23 +20,6 @@ impl PbrShaderProgram {
             .fragment_shader_source(FRAGMENT_SHADER_SOURCE)?
             .link();
         Ok(Self { shader_program })
-    }
-
-    pub fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
-        self.shader_program.use_program();
-
-        unsafe {
-            gl::Enable(gl::CULL_FACE);
-            gl::CullFace(gl::BACK);
-            gl::FrontFace(gl::CCW);
-            gl::Enable(gl::DEPTH_TEST);
-            gl::DepthFunc(gl::LEQUAL);
-        }
-
-        self.upload_lights(world)?;
-        self.update_uniforms(world, aspect_ratio)?;
-
-        Ok(())
     }
 
     fn upload_lights(&self, world: &World) -> Result<()> {
@@ -79,13 +64,32 @@ impl PbrShaderProgram {
             .set_uniform_matrix4x4("view", view.as_slice());
         Ok(())
     }
+}
 
-    pub fn update_model_matrix(&self, model_matrix: glm::Mat4) {
+impl WorldShader for PbrShaderProgram {
+    fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
+        self.shader_program.use_program();
+
+        unsafe {
+            gl::Enable(gl::CULL_FACE);
+            gl::CullFace(gl::BACK);
+            gl::FrontFace(gl::CCW);
+            gl::Enable(gl::DEPTH_TEST);
+            gl::DepthFunc(gl::LEQUAL);
+        }
+
+        self.upload_lights(world)?;
+        self.update_uniforms(world, aspect_ratio)?;
+
+        Ok(())
+    }
+
+    fn update_model_matrix(&self, model_matrix: glm::Mat4) {
         self.shader_program
             .set_uniform_matrix4x4("model", model_matrix.as_slice());
     }
 
-    pub fn update_material(&self, material: &Material, textures: &[Texture]) -> Result<()> {
+    fn update_material(&self, material: &Material, textures: &[Texture]) -> Result<()> {
         self.shader_program.set_uniform_vec4(
             "material.baseColorFactor",
             material.base_color_factor.as_slice(),

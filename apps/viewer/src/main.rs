@@ -71,8 +71,6 @@ impl App for Viewer {
             y: viewport.min.y,
             width: viewport.width(),
             height: viewport.height(),
-            min_depth: -1.0,
-            max_depth: 1.0,
         });
 
         Ok(())

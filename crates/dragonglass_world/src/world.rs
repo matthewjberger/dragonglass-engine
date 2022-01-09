@@ -620,6 +620,33 @@ impl World {
             }
         }
     }
+
+    pub fn entity_model_matrix(
+        &self,
+        entity: Entity,
+        global_transform: glm::Mat4,
+    ) -> Result<glm::Mat4> {
+        // NOTE: The rigid body collider scaling should be the same as the scale of the entity transform
+        //       otherwise this won't look right. It's probably best to just not scale entities that have rigid bodies
+        //       with colliders on them.
+        let entry = self.ecs.entry_ref(entity)?;
+        let model = match entry.get_component::<RigidBody>() {
+            Ok(rigid_body) => {
+                let body = self
+                    .physics
+                    .bodies
+                    .get(rigid_body.handle)
+                    .context("Failed to acquire physics body to render!")?;
+                let position = body.position();
+                let translation = position.translation.vector;
+                let rotation = *position.rotation.quaternion();
+                let scale = Transform::from(global_transform).scale;
+                Transform::new(translation, rotation, scale).matrix()
+            }
+            Err(_) => global_transform,
+        };
+        Ok(model)
+    }
 }
 
 #[derive(Default, Copy, Clone)]

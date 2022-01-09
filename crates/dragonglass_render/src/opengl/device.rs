@@ -1,4 +1,3 @@
-use super::shaders::{PbrShader, SolidShader};
 use crate::{opengl::world::WorldRender, Renderer};
 use dragonglass_dependencies::{
     anyhow::Result,
@@ -10,8 +9,6 @@ use dragonglass_dependencies::{
 use dragonglass_world::{Viewport, World};
 
 pub struct OpenGLRenderDevice {
-    pbr_shader: PbrShader,
-    solid_shader: SolidShader,
     world_render: Option<WorldRender>,
     glow: glow::Context,
     egui_glow: egui_glow::EguiGlow,
@@ -28,11 +25,7 @@ impl OpenGLRenderDevice {
             glow::Context::from_loader_function(|symbol| context.get_proc_address(symbol))
         };
         let egui_glow = egui_glow::EguiGlow::new(context, &glow_context);
-        let pbr_shader = PbrShader::new()?;
-        let solid_shader = SolidShader::new()?;
         Ok(Self {
-            pbr_shader,
-            solid_shader,
             world_render: None,
             glow: glow_context,
             egui_glow,
@@ -81,38 +74,20 @@ impl Renderer for OpenGLRenderDevice {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
+
+            gl::Enable(gl::CULL_FACE);
+            gl::CullFace(gl::BACK);
+            gl::FrontFace(gl::CCW);
+
+            gl::Enable(gl::DEPTH_TEST);
+            gl::DepthFunc(gl::LEQUAL);
         }
 
         let aspect_ratio =
             self.viewport.width as f32 / std::cmp::max(self.viewport.height as u32, 1) as f32;
 
         if let Some(world_render) = self.world_render.as_ref() {
-            unsafe {
-                gl::Enable(gl::CULL_FACE);
-                gl::CullFace(gl::BACK);
-                gl::FrontFace(gl::CCW);
-                gl::Enable(gl::DEPTH_TEST);
-                gl::DepthFunc(gl::LEQUAL);
-            }
-
-            unsafe {
-                gl::Enable(gl::STENCIL_TEST);
-                gl::StencilOp(gl::KEEP, gl::KEEP, gl::REPLACE);
-                gl::StencilFunc(gl::ALWAYS, 1, 0xFF);
-                gl::StencilMask(0xFF);
-            }
-            world_render.render(world, aspect_ratio, &self.pbr_shader)?;
-
-            unsafe {
-                gl::StencilFunc(gl::NOTEQUAL, 1, 0xFF);
-                gl::Disable(gl::DEPTH_TEST);
-            }
-            world_render.render(world, aspect_ratio, &self.solid_shader)?;
-            unsafe {
-                gl::Enable(gl::DEPTH_TEST);
-                gl::Disable(gl::STENCIL_TEST);
-                gl::Clear(gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
-            }
+            world_render.render(world, aspect_ratio)?;
         }
 
         self.render_gui(context, gui_context, clipped_shapes);

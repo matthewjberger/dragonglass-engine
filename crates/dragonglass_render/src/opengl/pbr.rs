@@ -1,4 +1,4 @@
-use crate::opengl::world::{Light, WorldShader};
+use crate::opengl::world::Light;
 use dragonglass_dependencies::{
     anyhow::{bail, Result},
     nalgebra_glm as glm,
@@ -7,7 +7,7 @@ use dragonglass_opengl::{ShaderProgram, Texture};
 use dragonglass_world::{Material, World};
 
 pub struct PbrShader {
-    shader_program: ShaderProgram,
+    pub shader_program: ShaderProgram,
 }
 
 impl PbrShader {
@@ -62,22 +62,20 @@ impl PbrShader {
             .set_uniform_matrix4x4("view", view.as_slice());
         Ok(())
     }
-}
 
-impl WorldShader for PbrShader {
-    fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
+    pub fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
         self.shader_program.use_program();
         self.upload_lights(world)?;
         self.update_uniforms(world, aspect_ratio)?;
         Ok(())
     }
 
-    fn update_model_matrix(&self, model_matrix: glm::Mat4) {
+    pub fn update_model_matrix(&self, model_matrix: glm::Mat4) {
         self.shader_program
             .set_uniform_matrix4x4("model", model_matrix.as_slice());
     }
 
-    fn update_material(&self, material: &Material, textures: &[Texture]) -> Result<()> {
+    pub fn update_material(&self, material: &Material, textures: &[Texture]) -> Result<()> {
         self.shader_program.set_uniform_vec4(
             "material.baseColorFactor",
             material.base_color_factor.as_slice(),

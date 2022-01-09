@@ -1,7 +1,9 @@
+use super::pbr::PbrShader;
 use dragonglass_dependencies::{anyhow::Result, gl, nalgebra_glm as glm};
 use dragonglass_opengl::{GeometryBuffer, Texture};
 use dragonglass_world::{
-    AlphaMode, EntityStore, LightKind, Material, Mesh, MeshRender, TextureFormat, Transform, World,
+    AlphaMode, EntityStore, LightKind, Material, Mesh, MeshRender, Selected, TextureFormat,
+    Transform, World,
 };
 use std::ptr;
 
@@ -53,15 +55,10 @@ impl Light {
     }
 }
 
-pub trait WorldShader {
-    fn update(&self, world: &World, aspect_ratio: f32) -> Result<()>;
-    fn update_model_matrix(&self, model_matrix: glm::Mat4);
-    fn update_material(&self, material: &Material, textures: &[Texture]) -> Result<()>;
-}
-
 pub struct WorldRender {
     pub geometry: GeometryBuffer,
     pub textures: Vec<Texture>,
+    pbr_shader: PbrShader,
 }
 
 impl WorldRender {
@@ -78,7 +75,11 @@ impl WorldRender {
             .map(Self::map_world_texture)
             .collect::<Vec<_>>();
 
-        Ok(Self { geometry, textures })
+        Ok(Self {
+            pbr_shader: PbrShader::new()?,
+            geometry,
+            textures,
+        })
     }
 
     fn map_world_texture(
@@ -119,32 +120,33 @@ impl WorldRender {
         texture
     }
 
-    pub fn render(
-        &self,
-        world: &World,
-        aspect_ratio: f32,
-        shader: &impl WorldShader,
-    ) -> Result<()> {
-        shader.update(world, aspect_ratio)?;
+    pub fn render(&self, world: &World, aspect_ratio: f32) -> Result<()> {
+        self.pbr_shader.update(world, aspect_ratio)?;
         self.geometry.bind();
         for alpha_mode in [AlphaMode::Opaque, AlphaMode::Mask, AlphaMode::Blend].iter() {
             for graph in world.scene.graphs.iter() {
                 graph.walk(|node_index| {
                     let entity = graph[node_index];
                     let entry = world.ecs.entry_ref(entity)?;
+
                     let mesh_component = match entry.get_component::<MeshRender>() {
                         Ok(mesh_component) => mesh_component,
                         Err(_) => return Ok(()),
                     };
+
                     let mesh = match world.geometry.meshes.get(&mesh_component.name) {
                         Some(mesh) => mesh,
                         None => return Ok(()),
                     };
+
                     Self::set_blend_mode(alpha_mode);
                     let global_transform = world.global_transform(graph, node_index)?;
                     let model_matrix = world.entity_model_matrix(entity, global_transform)?;
-                    shader.update_model_matrix(model_matrix);
-                    self.render_mesh(mesh, world, alpha_mode, shader)?;
+                    self.pbr_shader.update_model_matrix(model_matrix);
+
+                    let selected = entry.get_component::<Selected>().is_ok();
+                    self.render_mesh(mesh, world, alpha_mode, selected)?;
+
                     Ok(())
                 })?;
             }
@@ -170,7 +172,7 @@ impl WorldRender {
         mesh: &Mesh,
         world: &World,
         alpha_mode: &AlphaMode,
-        shader: &impl WorldShader,
+        _outline: bool,
     ) -> Result<()> {
         for primitive in mesh.primitives.iter() {
             let material = match primitive.material_index {
@@ -184,10 +186,11 @@ impl WorldRender {
                 None => Material::default(),
             };
 
-            shader.update_material(&material, &self.textures)?;
+            self.pbr_shader.update_material(&material, &self.textures)?;
 
             let ptr: *const u8 = ptr::null_mut();
             let ptr = unsafe { ptr.add(primitive.first_index * std::mem::size_of::<u32>()) };
+
             unsafe {
                 gl::DrawElements(
                     gl::TRIANGLES,

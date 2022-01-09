@@ -3,10 +3,13 @@ use dragonglass::{
     dependencies::{
         anyhow::Result,
         egui::{self, global_dark_light_mode_switch, Id, LayerId, Ui},
-        env_logger, log,
-        winit::event::{ElementState, KeyboardInput, VirtualKeyCode},
+        env_logger,
+        legion::IntoQuery,
+        log,
+        rapier3d::prelude::{InteractionGroups, RigidBodyType},
+        winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
-    world::{load_gltf, Viewport},
+    world::{load_gltf, Entity, MeshRender, Viewport},
 };
 
 #[derive(Default)]
@@ -27,11 +30,12 @@ impl App for Editor {
             self.camera.update(app_state, camera_entity)?;
         }
 
-        if !app_state.world.animations.is_empty() {
-            app_state
-                .world
-                .animate(0, 0.75 * app_state.system.delta_time as f32)?;
-        }
+        // Animate entities
+        // if !app_state.world.animations.is_empty() {
+        //     app_state
+        //         .world
+        //         .animate(0, 0.75 * app_state.system.delta_time as f32)?;
+        // }
 
         Ok(())
     }
@@ -68,8 +72,10 @@ impl App for Editor {
                 ui.allocate_space(ui.available_size());
             });
 
-        // Calculate the rect needed for rendering
-        let viewport = Ui::new(
+        // This is the space leftover on screen after the UI is drawn
+        // We can restrict rendering to this viewport to
+        // prevent drawing the gui over the scene
+        let central_rect = Ui::new(
             ctx.clone(),
             LayerId::background(),
             Id::new("central_panel"),
@@ -78,16 +84,14 @@ impl App for Editor {
         )
         .max_rect();
 
-        let dimensions = app_state.context.window().inner_size();
-        let _offset = dimensions.height as f32 - viewport.max.y;
-        app_state.renderer.set_viewport(Viewport {
-            x: viewport.min.x,
-            y: viewport.min.y,
-            width: viewport.width(),
-            height: viewport.height(),
-            min_depth: -1.0,
-            max_depth: 1.0,
-        });
+        // TODO: Don't render underneath the gui
+        let _viewport = Viewport {
+            x: central_rect.min.x,
+            y: central_rect.min.y,
+            width: central_rect.width(),
+            height: central_rect.height(),
+        };
+        // app_state.renderer.set_viewport(viewport);
 
         Ok(())
     }
@@ -108,6 +112,21 @@ impl App for Editor {
                     load_gltf(raw_path, app_state.world)?;
                     app_state.world.add_default_light()?;
                     app_state.renderer.load_world(app_state.world)?;
+
+                    let mut query = <(Entity, &MeshRender)>::query();
+                    let entities = query
+                        .iter(&mut app_state.world.ecs)
+                        .map(|(e, _)| *e)
+                        .collect::<Vec<_>>();
+
+                    for entity in entities.into_iter() {
+                        app_state
+                            .world
+                            .add_rigid_body(entity, RigidBodyType::Static)?;
+                        app_state
+                            .world
+                            .add_trimesh_collider(entity, InteractionGroups::all())?;
+                    }
                 }
                 // Some("hdr") => Self::load_hdr(raw_path, application)?,
                 Some("dga") => {
@@ -130,6 +149,25 @@ impl App for Editor {
             app_state.world.clear()?;
         }
 
+        Ok(())
+    }
+
+    fn on_mouse(
+        &mut self,
+        button: &MouseButton,
+        button_state: &ElementState,
+        app_state: &mut AppState,
+    ) -> Result<()> {
+        if (MouseButton::Left, ElementState::Pressed) == (*button, *button_state) {
+            let interact_distance = f32::MAX;
+            if let Some(entity) = app_state.world.pick_object(
+                &app_state.mouse_ray_configuration()?,
+                interact_distance,
+                InteractionGroups::all(),
+            )? {
+                log::info!("Picked entity: {:?}", entity);
+            }
+        }
         Ok(())
     }
 }

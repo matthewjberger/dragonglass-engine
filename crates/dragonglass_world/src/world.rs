@@ -485,40 +485,24 @@ impl World {
 
     pub fn mouse_ray(&mut self, configuration: &MouseRayConfiguration) -> Result<Ray> {
         let MouseRayConfiguration {
-            viewport_width,
-            viewport_height,
+            viewport,
             projection_matrix,
             view_matrix,
             mouse_position,
-            invert_y,
         } = *configuration;
 
-        let position = {
-            let mut position = mouse_position;
-            if invert_y {
-                position.y = viewport_height - position.y;
-            }
-            position
-        };
+        let mut position = mouse_position;
+        position.y = viewport.height - position.y;
 
         let near_point = glm::vec2_to_vec3(&position);
 
         let mut far_point = near_point;
         far_point.z = 1.0;
 
-        let p_near = glm::unproject_zo(
-            &near_point,
-            &view_matrix,
-            &projection_matrix,
-            glm::vec4(0.0, 0.0, viewport_width, viewport_height),
-        );
-
-        let p_far = glm::unproject_zo(
-            &far_point,
-            &view_matrix,
-            &projection_matrix,
-            glm::vec4(0.0, 0.0, viewport_width, viewport_height),
-        );
+        // TODO: If using vulkan we need to use un/project_zo, maybe add depth to viewport?
+        let viewport = viewport.as_glm_vec();
+        let p_near = glm::unproject(&near_point, &view_matrix, &projection_matrix, viewport);
+        let p_far = glm::unproject(&far_point, &view_matrix, &projection_matrix, viewport);
 
         let direction = (p_far - p_near).normalize();
         let ray = Ray::new(Point3::from(p_near), direction);
@@ -638,14 +622,12 @@ impl World {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Viewport {
     pub x: f32,
     pub y: f32,
     pub width: f32,
     pub height: f32,
-    pub min_depth: f32,
-    pub max_depth: f32,
 }
 
 impl Viewport {
@@ -653,15 +635,17 @@ impl Viewport {
         let height = if self.height > 0.0 { self.height } else { 1.0 };
         self.width / height
     }
+
+    pub fn as_glm_vec(&self) -> glm::Vec4 {
+        glm::vec4(self.x, self.y, self.width, self.height)
+    }
 }
 
 pub struct MouseRayConfiguration {
-    pub viewport_width: f32,
-    pub viewport_height: f32,
+    pub viewport: Viewport,
     pub projection_matrix: glm::Mat4,
     pub view_matrix: glm::Mat4,
     pub mouse_position: glm::Vec2,
-    pub invert_y: bool,
 }
 
 fn serialize_ecs<S>(ecs: &Ecs, serializer: S) -> Result<S::Ok, S::Error>

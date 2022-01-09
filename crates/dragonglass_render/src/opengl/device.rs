@@ -34,8 +34,6 @@ impl OpenGLRenderDevice {
                 y: 0.0,
                 width: dimensions.width as _,
                 height: dimensions.height as _,
-                min_depth: -1.0,
-                max_depth: 1.0,
             },
         })
     }
@@ -88,6 +86,10 @@ impl Renderer for OpenGLRenderDevice {
         Ok(())
     }
 
+    fn viewport(&self) -> Viewport {
+        self.viewport
+    }
+
     fn set_viewport(&mut self, viewport: Viewport) {
         unsafe {
             gl::Viewport(
@@ -105,6 +107,12 @@ impl Renderer for OpenGLRenderDevice {
         context: &ContextWrapper<PossiblyCurrent, Window>,
         dimensions: PhysicalSize<u32>,
     ) {
+        self.set_viewport(Viewport {
+            x: 0.0,
+            y: 0.0,
+            width: dimensions.width as _,
+            height: dimensions.height as _,
+        });
         context.resize(dimensions);
     }
 }

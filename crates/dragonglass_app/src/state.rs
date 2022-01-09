@@ -13,7 +13,7 @@ use dragonglass_dependencies::{
 };
 use dragonglass_gui::Gui;
 use dragonglass_render::Renderer;
-use dragonglass_world::World;
+use dragonglass_world::{MouseRayConfiguration, World};
 use std::{cmp, collections::HashMap, time::Instant};
 
 pub type KeyMap = HashMap<VirtualKeyCode, ElementState>;
@@ -45,6 +45,21 @@ impl<'a> AppState<'a> {
             .context
             .window()
             .set_cursor_position(PhysicalPosition::new(position.x, position.y))?)
+    }
+
+    pub fn mouse_ray_configuration(&self) -> Result<MouseRayConfiguration> {
+        let viewport = self.renderer.viewport();
+
+        let (projection, view) = self.world.active_camera_matrices(viewport.aspect_ratio())?;
+
+        let mouse_ray_configuration = MouseRayConfiguration {
+            viewport,
+            projection_matrix: projection,
+            view_matrix: view,
+            mouse_position: self.input.mouse.position,
+        };
+
+        Ok(mouse_ray_configuration)
     }
 }
 

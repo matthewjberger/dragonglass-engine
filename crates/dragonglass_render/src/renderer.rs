@@ -22,6 +22,7 @@ pub trait Renderer {
         clipped_shapes: Vec<ClippedShape>,
     ) -> Result<()>;
     fn load_world(&mut self, world: &World) -> Result<()>;
+    fn viewport(&self) -> Viewport;
     fn set_viewport(&mut self, viewport: Viewport);
     fn resize(
         &mut self,

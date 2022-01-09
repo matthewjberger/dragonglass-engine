@@ -64,10 +64,19 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 model;
 
+mat4 scale(float x, float y, float z){
+    return mat4(
+        vec4(x,   0.0, 0.0, 0.0),
+        vec4(0.0, y,   0.0, 0.0),
+        vec4(0.0, 0.0, z,   0.0),
+        vec4(0.0, 0.0, 0.0, 1.0)
+    );
+}
+
 void main()
 {
-   vec3 position = vec3(model * vec4(inPosition, 1.0));
-   gl_Position = projection * view * vec4(position, 1.0);
+   float scaleFactor = 1.1;
+   gl_Position = projection * view * model * scale(scaleFactor, scaleFactor, scaleFactor) * vec4(inPosition.xyz, 1.0);
 }
 "#;
 

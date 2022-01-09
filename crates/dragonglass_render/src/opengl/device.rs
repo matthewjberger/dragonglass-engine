@@ -11,7 +11,7 @@ use dragonglass_world::{Viewport, World};
 
 pub struct OpenGLRenderDevice {
     pbr_shader: PbrShader,
-    _solid_shader: SolidShader,
+    solid_shader: SolidShader,
     world_render: Option<WorldRender>,
     glow: glow::Context,
     egui_glow: egui_glow::EguiGlow,
@@ -32,7 +32,7 @@ impl OpenGLRenderDevice {
         let solid_shader = SolidShader::new()?;
         Ok(Self {
             pbr_shader,
-            _solid_shader: solid_shader,
+            solid_shader,
             world_render: None,
             glow: glow_context,
             egui_glow,
@@ -79,7 +79,7 @@ impl Renderer for OpenGLRenderDevice {
         clipped_shapes: Vec<ClippedShape>,
     ) -> Result<()> {
         unsafe {
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
         }
 
@@ -95,7 +95,24 @@ impl Renderer for OpenGLRenderDevice {
                 gl::DepthFunc(gl::LEQUAL);
             }
 
+            unsafe {
+                gl::Enable(gl::STENCIL_TEST);
+                gl::StencilOp(gl::KEEP, gl::KEEP, gl::REPLACE);
+                gl::StencilFunc(gl::ALWAYS, 1, 0xFF);
+                gl::StencilMask(0xFF);
+            }
             world_render.render(world, aspect_ratio, &self.pbr_shader)?;
+
+            unsafe {
+                gl::StencilFunc(gl::NOTEQUAL, 1, 0xFF);
+                gl::Disable(gl::DEPTH_TEST);
+            }
+            world_render.render(world, aspect_ratio, &self.solid_shader)?;
+            unsafe {
+                gl::Enable(gl::DEPTH_TEST);
+                gl::Disable(gl::STENCIL_TEST);
+                gl::Clear(gl::DEPTH_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
+            }
         }
 
         self.render_gui(context, gui_context, clipped_shapes);

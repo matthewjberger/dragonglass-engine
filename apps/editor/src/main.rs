@@ -7,16 +7,17 @@ use dragonglass::{
         egui::{self, global_dark_light_mode_switch, Id, LayerId, Ui},
         env_logger,
         legion::IntoQuery,
-        log,
+        log, nalgebra_glm as glm,
         rapier3d::prelude::{InteractionGroups, RigidBodyType},
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
-    world::{load_gltf, Entity, MeshRender, Selected, Viewport},
+    world::{load_gltf, Entity, EntityStore, MeshRender, Selected, Transform, Viewport},
 };
 
 #[derive(Default)]
 struct Editor {
     camera: MouseOrbit,
+    moving_selected: bool,
 }
 
 impl Editor {
@@ -93,7 +94,7 @@ impl App for Editor {
     }
 
     fn update(&mut self, app_state: &mut AppState) -> Result<()> {
-        if app_state.world.active_camera_is_main()? {
+        if app_state.world.active_camera_is_main()? && !self.moving_selected {
             let camera_entity = app_state.world.active_camera()?;
             self.camera.update(app_state, camera_entity)?;
         }
@@ -104,6 +105,26 @@ impl App for Editor {
         //         .world
         //         .animate(0, 0.75 * app_state.system.delta_time as f32)?;
         // }
+
+        if self.moving_selected {
+            let mut query = <(Entity, &Selected)>::query();
+            let entities = query
+                .iter_mut(&mut app_state.world.ecs)
+                .map(|(e, _)| (*e))
+                .collect::<Vec<_>>();
+            for entity in entities.into_iter() {
+                let mut entry = app_state.world.ecs.entry_mut(entity)?;
+                let speed = 10.0;
+                let transform = entry.get_component_mut::<Transform>()?;
+                let mouse_delta =
+                    app_state.input.mouse.position_delta * app_state.system.delta_time as f32;
+                if app_state.input.mouse.is_right_clicked {
+                    transform.translation += transform.right() * mouse_delta.x * speed;
+                    transform.translation += transform.up() * -mouse_delta.y * speed;
+                }
+                app_state.world.sync_rigid_body_to_transform(entity)?;
+            }
+        }
 
         Ok(())
     }
@@ -177,6 +198,16 @@ impl App for Editor {
         if input.virtual_keycode == Some(VirtualKeyCode::C) && input.state == ElementState::Pressed
         {
             app_state.world.clear()?;
+        }
+
+        if input.virtual_keycode == Some(VirtualKeyCode::G) && input.state == ElementState::Pressed
+        {
+            self.moving_selected = !self.moving_selected;
+        }
+
+        if input.virtual_keycode == Some(VirtualKeyCode::S) && input.state == ElementState::Pressed
+        {
+            app_state.world.save("map.dga")?;
         }
 
         Ok(())

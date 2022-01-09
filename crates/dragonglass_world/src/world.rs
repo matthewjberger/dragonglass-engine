@@ -1,4 +1,4 @@
-use crate::{Name, RigidBody, WorldPhysics};
+use crate::{Name, RigidBody, Selected, WorldPhysics};
 use dragonglass_dependencies::{
     anyhow::{bail, Context, Result},
     bincode,
@@ -41,6 +41,7 @@ lazy_static! {
         registry.register::<Skin>("skin".to_string());
         registry.register::<Light>("light".to_string());
         registry.register::<RigidBody>("rigid_body".to_string());
+        registry.register::<Selected>("selected".to_string());
         Arc::new(RwLock::new(registry))
     };
     pub static ref ENTITY_SERIALIZER: Canon = Canon::default();
@@ -547,7 +548,6 @@ impl World {
 
     pub fn tick(&mut self, delta_time: f32) -> Result<()> {
         self.physics.update(delta_time);
-        self.sync_all_rigid_bodies();
         Ok(())
     }
 
@@ -564,6 +564,7 @@ impl World {
     }
 
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
+        log::info!("Saved world!");
         Ok(std::fs::write(path, &self.as_bytes()?)?)
     }
 
@@ -626,9 +627,6 @@ impl World {
         entity: Entity,
         global_transform: glm::Mat4,
     ) -> Result<glm::Mat4> {
-        // NOTE: The rigid body collider scaling should be the same as the scale of the entity transform
-        //       otherwise this won't look right. It's probably best to just not scale entities that have rigid bodies
-        //       with colliders on them.
         let entry = self.ecs.entry_ref(entity)?;
         let model = match entry.get_component::<RigidBody>() {
             Ok(rigid_body) => {

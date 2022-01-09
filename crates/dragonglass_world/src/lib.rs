@@ -12,8 +12,4 @@ pub struct Name(pub String);
 
 #[derive(Default, Serialize, Deserialize)]
 #[serde(crate = "dragonglass_dependencies::serde")]
-pub struct Outline;
-
-#[derive(Default, Serialize, Deserialize)]
-#[serde(crate = "dragonglass_dependencies::serde")]
 pub struct Selected;

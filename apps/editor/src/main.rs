@@ -7,7 +7,7 @@ use dragonglass::{
         egui::{self, global_dark_light_mode_switch, Id, LayerId, Ui},
         env_logger,
         legion::IntoQuery,
-        log, nalgebra_glm as glm,
+        log,
         rapier3d::prelude::{InteractionGroups, RigidBodyType},
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
@@ -52,12 +52,11 @@ impl Editor {
             match extension.to_str() {
                 Some("glb") | Some("gltf") => {
                     load_gltf(raw_path, app_state.world)?;
-                    app_state.world.add_default_light()?;
-                    app_state.renderer.load_world(app_state.world)?;
+
                 }
                 // Some("hdr") => Self::load_hdr(raw_path, application)?,
                 Some("dga") => {
-                    // TODO: Load from dga
+                    app_state.world.load(raw_path)?;
                     log::info!("Loaded world!");
                 }
                 _ => log::warn!(
@@ -65,6 +64,10 @@ impl Editor {
                     extension
                 ),
             }
+
+            // TODO: Probably don't want this added every time
+            app_state.world.add_default_light()?;
+            app_state.renderer.load_world(app_state.world)?;
 
             let mut query = <(Entity, &MeshRender)>::query();
             let entities = query
@@ -205,6 +208,7 @@ impl App for Editor {
             self.moving_selected = !self.moving_selected;
         }
 
+        // TODO: Move this into the gui
         if input.virtual_keycode == Some(VirtualKeyCode::S) && input.state == ElementState::Pressed
         {
             app_state.world.save("map.dga")?;

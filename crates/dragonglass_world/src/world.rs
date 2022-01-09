@@ -26,6 +26,7 @@ use dragonglass_dependencies::{
 use std::{
     collections::HashMap,
     io::{BufReader, Cursor},
+    mem::replace,
     ops::{Index, IndexMut},
     path::Path,
     sync::{Arc, RwLock},
@@ -568,8 +569,10 @@ impl World {
         Ok(std::fs::write(path, &self.as_bytes()?)?)
     }
 
-    pub fn load(path: impl AsRef<Path>) -> Result<Self> {
-        Self::from_bytes(&std::fs::read(path)?)
+    pub fn load(&mut self, path: impl AsRef<Path>) -> Result<()> {
+        let world = Self::from_bytes(&std::fs::read(path)?)?;
+        let _ = replace(self, world);
+        Ok(())
     }
 
     pub fn load_hdr(&mut self, path: impl AsRef<Path>) -> Result<()> {

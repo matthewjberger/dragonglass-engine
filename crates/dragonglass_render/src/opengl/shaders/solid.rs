@@ -1,7 +1,8 @@
-use super::world::WorldShader;
 use dragonglass_dependencies::{anyhow::Result, nalgebra_glm as glm};
 use dragonglass_opengl::{ShaderProgram, Texture};
 use dragonglass_world::{Material, World};
+
+use crate::opengl::world::WorldShader;
 
 pub struct SolidShader {
     shader_program: ShaderProgram,

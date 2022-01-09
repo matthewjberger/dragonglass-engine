@@ -1,4 +1,4 @@
-use super::{pbr::PbrShader, solid::SolidShader};
+use super::shaders::{PbrShader, SolidShader};
 use crate::{opengl::world::WorldRender, Renderer};
 use dragonglass_dependencies::{
     anyhow::Result,
@@ -11,7 +11,7 @@ use dragonglass_world::{Viewport, World};
 
 pub struct OpenGLRenderDevice {
     pbr_shader: PbrShader,
-    solid_shader: SolidShader,
+    _solid_shader: SolidShader,
     world_render: Option<WorldRender>,
     glow: glow::Context,
     egui_glow: egui_glow::EguiGlow,
@@ -32,7 +32,7 @@ impl OpenGLRenderDevice {
         let solid_shader = SolidShader::new()?;
         Ok(Self {
             pbr_shader,
-            solid_shader,
+            _solid_shader: solid_shader,
             world_render: None,
             glow: glow_context,
             egui_glow,

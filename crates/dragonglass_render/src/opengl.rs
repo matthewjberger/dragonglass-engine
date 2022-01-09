@@ -1,6 +1,5 @@
 mod device;
-mod pbr;
-mod solid;
+mod shaders;
 mod world;
 
 pub use self::device::OpenGLRenderDevice;

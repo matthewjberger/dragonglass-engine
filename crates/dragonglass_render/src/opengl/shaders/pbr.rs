@@ -1,5 +1,4 @@
-use super::world::WorldShader;
-use crate::opengl::world::Light;
+use crate::opengl::world::{Light, WorldShader};
 use dragonglass_dependencies::{
     anyhow::{bail, Result},
     nalgebra_glm as glm,

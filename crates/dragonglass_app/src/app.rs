@@ -15,11 +15,14 @@ use dragonglass_world::World;
 use std::path::PathBuf;
 
 pub trait App {
-    fn initialize(&mut self, _world: &mut World) -> Result<()> {
+    fn initialize(&mut self, _app_state: &mut AppState) -> Result<()> {
         Ok(())
     }
     fn update(&mut self, _app_state: &mut AppState) -> Result<()> {
         Ok(())
+    }
+    fn gui_active(&mut self) -> bool {
+        return false;
     }
     fn update_gui(&mut self, _app_state: &mut AppState) -> Result<()> {
         Ok(())
@@ -73,7 +76,14 @@ pub fn run_application(mut app: impl App + 'static, title: &str) -> Result<()> {
     let mut input = Input::default();
     let mut system = System::new(inner_size);
 
-    app.initialize(&mut world)?;
+    app.initialize(&mut AppState {
+        context: &mut context,
+        world: &mut world,
+        gui: &mut gui,
+        renderer: &mut renderer,
+        input: &mut input,
+        system: &mut system,
+    })?;
 
     event_loop.run(move |event, _, control_flow| {
         let state = AppState {
@@ -98,8 +108,10 @@ fn run_loop(
 ) -> Result<()> {
     *control_flow = ControlFlow::Poll;
 
-    app_state.gui.handle_event(&event);
-    if !app_state.gui.captures_event(&event) {
+    if app.gui_active() {
+        app_state.gui.handle_event(&event);
+    }
+    if !app.gui_active() || !app_state.gui.captures_event(&event) {
         app.handle_events(&event, &mut app_state)?;
         app_state.system.handle_event(&event);
         app_state
@@ -128,19 +140,23 @@ fn run_loop(
             _ => (),
         },
         Event::MainEventsCleared => {
-            app.update(&mut app_state)?;
             app_state.world.tick(app_state.system.delta_time as f32)?;
+            app.update(&mut app_state)?;
 
-            let _frame_data = app_state
-                .gui
-                .start_frame(app_state.context.window().scale_factor() as _);
-            app.update_gui(&mut app_state)?;
-            let clipped_shapes = app_state.gui.end_frame(app_state.context.window());
+            let clipped_shapes = if app.gui_active() {
+                let _frame_data = app_state
+                    .gui
+                    .start_frame(app_state.context.window().scale_factor() as _);
+                app.update_gui(&mut app_state)?;
+                app_state.gui.end_frame(app_state.context.window())
+            } else {
+                Vec::new()
+            };
 
             app_state.renderer.render(
                 app_state.context,
-                &app_state.gui.context(),
                 app_state.world,
+                &app_state.gui.context(),
                 clipped_shapes,
             )?;
         }

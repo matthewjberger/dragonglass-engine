@@ -73,6 +73,10 @@ impl WorldPhysics {
         }
     }
 
+    pub fn set_gravity(&mut self, gravity: Vector3<f32>) {
+        self.gravity = gravity;
+    }
+
     pub fn update(&mut self, delta_time: f32) {
         self.integration_parameters.dt = delta_time;
 

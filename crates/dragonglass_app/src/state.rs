@@ -8,12 +8,12 @@ use dragonglass_dependencies::{
             ElementState, Event, KeyboardInput, MouseButton, MouseScrollDelta, VirtualKeyCode,
             WindowEvent,
         },
-        window::Window,
+        window::{Fullscreen, Window},
     },
 };
 use dragonglass_gui::Gui;
 use dragonglass_render::Renderer;
-use dragonglass_world::{MouseRayConfiguration, World};
+use dragonglass_world::{load_gltf, MouseRayConfiguration, World};
 use std::{cmp, collections::HashMap, time::Instant};
 
 pub type KeyMap = HashMap<VirtualKeyCode, ElementState>;
@@ -47,6 +47,14 @@ impl<'a> AppState<'a> {
             .set_cursor_position(PhysicalPosition::new(position.x, position.y))?)
     }
 
+    pub fn set_fullscreen(&mut self) {
+        self.context
+            .window()
+            .set_fullscreen(Some(Fullscreen::Borderless(
+                self.context.window().primary_monitor(),
+            )));
+    }
+
     pub fn mouse_ray_configuration(&self) -> Result<MouseRayConfiguration> {
         let viewport = self.renderer.viewport();
 
@@ -60,6 +68,12 @@ impl<'a> AppState<'a> {
         };
 
         Ok(mouse_ray_configuration)
+    }
+
+    pub fn load_asset(&mut self, path: &str) -> Result<()> {
+        load_gltf(path, &mut self.world)?;
+        self.renderer.load_world(&self.world)?;
+        Ok(())
     }
 }
 

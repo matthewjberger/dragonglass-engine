@@ -90,9 +90,13 @@ impl Editor {
 }
 
 impl App for Editor {
-    fn initialize(&mut self, world: &mut dragonglass::world::World) -> Result<()> {
+    fn gui_active(&mut self) -> bool {
+        true
+    }
+
+    fn initialize(&mut self, app_state: &mut AppState) -> Result<()> {
         env_logger::init();
-        world.add_default_light()?;
+        app_state.world.add_default_light()?;
         Ok(())
     }
 

@@ -17,8 +17,8 @@ pub trait Renderer {
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,
-        gui_context: &CtxRef,
         world: &World,
+        gui_context: &CtxRef,
         clipped_shapes: Vec<ClippedShape>,
     ) -> Result<()>;
     fn load_world(&mut self, world: &World) -> Result<()>;

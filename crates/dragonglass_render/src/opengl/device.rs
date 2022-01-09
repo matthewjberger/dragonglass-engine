@@ -67,8 +67,8 @@ impl Renderer for OpenGLRenderDevice {
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,
-        gui_context: &CtxRef,
         world: &World,
+        gui_context: &CtxRef,
         clipped_shapes: Vec<ClippedShape>,
     ) -> Result<()> {
         unsafe {
@@ -90,7 +90,9 @@ impl Renderer for OpenGLRenderDevice {
             world_render.render(world, aspect_ratio)?;
         }
 
-        self.render_gui(context, gui_context, clipped_shapes);
+        if !clipped_shapes.is_empty() {
+            self.render_gui(context, gui_context, clipped_shapes);
+        }
 
         context.swap_buffers()?;
 

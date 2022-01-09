@@ -1,7 +1,7 @@
 use dragonglass::{
     app::{run_application, App, AppState, MouseOrbit},
     dependencies::{
-        anyhow::Result,
+        anyhow::{Context, Result},
         egui::{self, global_dark_light_mode_switch, Id, LayerId, Ui},
         env_logger,
         legion::IntoQuery,
@@ -9,12 +9,35 @@ use dragonglass::{
         rapier3d::prelude::{InteractionGroups, RigidBodyType},
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
-    world::{load_gltf, Entity, MeshRender, Viewport},
+    world::{load_gltf, Entity, MeshRender, Selected, Viewport},
 };
 
 #[derive(Default)]
 struct Editor {
     camera: MouseOrbit,
+}
+
+impl Editor {
+    pub fn deselect_all(&mut self, app_state: &mut AppState) -> Result<()> {
+        let mut query = <(Entity, &Selected)>::query();
+
+        let entities = query
+            .iter(&mut app_state.world.ecs)
+            .map(|(e, _)| *e)
+            .collect::<Vec<_>>();
+
+        for entity in entities.into_iter() {
+            let mut entry = app_state
+                .world
+                .ecs
+                .entry(entity)
+                .context("Failed to find entity!")?;
+            log::info!("Deselecting entity: {:?}", entity);
+            entry.remove_component::<Selected>();
+        }
+
+        Ok(())
+    }
 }
 
 impl App for Editor {
@@ -165,7 +188,23 @@ impl App for Editor {
                 interact_distance,
                 InteractionGroups::all(),
             )? {
-                log::info!("Picked entity: {:?}", entity);
+                let mut query = <(Entity, &Selected)>::query();
+                let already_selected = query
+                    .iter(&mut app_state.world.ecs)
+                    .map(|(e, _)| *e)
+                    .any(|e| e == entity);
+                if already_selected {
+                    return Ok(());
+                }
+
+                self.deselect_all(app_state)?;
+                let mut entry = app_state
+                    .world
+                    .ecs
+                    .entry(entity)
+                    .context("Failed to find entity")?;
+                entry.add_component(Selected::default());
+                log::info!("Selected entity: {:?}", entity);
             }
         }
         Ok(())

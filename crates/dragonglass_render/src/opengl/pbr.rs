@@ -1,3 +1,4 @@
+use super::world::WorldShader;
 use crate::opengl::world::Light;
 use dragonglass_dependencies::{
     anyhow::{bail, Result},
@@ -6,13 +7,11 @@ use dragonglass_dependencies::{
 use dragonglass_opengl::{ShaderProgram, Texture};
 use dragonglass_world::{Material, World};
 
-use super::world::WorldShader;
-
-pub struct PbrShaderProgram {
+pub struct PbrShader {
     shader_program: ShaderProgram,
 }
 
-impl PbrShaderProgram {
+impl PbrShader {
     pub fn new() -> Result<Self> {
         let mut shader_program = ShaderProgram::new();
         shader_program
@@ -66,7 +65,7 @@ impl PbrShaderProgram {
     }
 }
 
-impl WorldShader for PbrShaderProgram {
+impl WorldShader for PbrShader {
     fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
         self.shader_program.use_program();
 

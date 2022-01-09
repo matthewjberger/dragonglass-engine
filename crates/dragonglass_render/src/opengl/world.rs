@@ -1,4 +1,3 @@
-use super::pbr::PbrShaderProgram;
 use dragonglass_dependencies::{anyhow::Result, gl, nalgebra_glm as glm};
 use dragonglass_opengl::{GeometryBuffer, Texture};
 use dragonglass_world::{
@@ -63,7 +62,6 @@ pub trait WorldShader {
 pub struct WorldRender {
     pub geometry: GeometryBuffer,
     pub textures: Vec<Texture>,
-    pub pbr_shader: PbrShaderProgram,
 }
 
 impl WorldRender {
@@ -80,13 +78,7 @@ impl WorldRender {
             .map(Self::map_world_texture)
             .collect::<Vec<_>>();
 
-        let pbr_shader = PbrShaderProgram::new()?;
-
-        Ok(Self {
-            geometry,
-            textures,
-            pbr_shader,
-        })
+        Ok(Self { geometry, textures })
     }
 
     fn map_world_texture(
@@ -127,8 +119,13 @@ impl WorldRender {
         texture
     }
 
-    pub fn render(&self, world: &World, aspect_ratio: f32) -> Result<()> {
-        self.pbr_shader.update(world, aspect_ratio)?;
+    pub fn render(
+        &self,
+        world: &World,
+        aspect_ratio: f32,
+        shader: &impl WorldShader,
+    ) -> Result<()> {
+        shader.update(world, aspect_ratio)?;
         self.geometry.bind();
         for alpha_mode in [AlphaMode::Opaque, AlphaMode::Mask, AlphaMode::Blend].iter() {
             for graph in world.scene.graphs.iter() {
@@ -146,8 +143,8 @@ impl WorldRender {
                     Self::set_blend_mode(alpha_mode);
                     let global_transform = world.global_transform(graph, node_index)?;
                     let model_matrix = world.entity_model_matrix(entity, global_transform)?;
-                    self.pbr_shader.update_model_matrix(model_matrix);
-                    self.render_mesh(mesh, world, alpha_mode)?;
+                    shader.update_model_matrix(model_matrix);
+                    self.render_mesh(mesh, world, alpha_mode, shader)?;
                     Ok(())
                 })?;
             }
@@ -168,7 +165,13 @@ impl WorldRender {
         }
     }
 
-    fn render_mesh(&self, mesh: &Mesh, world: &World, alpha_mode: &AlphaMode) -> Result<()> {
+    fn render_mesh(
+        &self,
+        mesh: &Mesh,
+        world: &World,
+        alpha_mode: &AlphaMode,
+        shader: &impl WorldShader,
+    ) -> Result<()> {
         for primitive in mesh.primitives.iter() {
             let material = match primitive.material_index {
                 Some(material_index) => {
@@ -181,7 +184,7 @@ impl WorldRender {
                 None => Material::default(),
             };
 
-            self.pbr_shader.update_material(&material, &self.textures)?;
+            shader.update_material(&material, &self.textures)?;
 
             let ptr: *const u8 = ptr::null_mut();
             let ptr = unsafe { ptr.add(primitive.first_index * std::mem::size_of::<u32>()) };

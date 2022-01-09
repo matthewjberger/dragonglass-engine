@@ -1,3 +1,4 @@
+use super::pbr::PbrShaderProgram;
 use crate::{opengl::world::WorldRender, Renderer};
 use dragonglass_dependencies::{
     anyhow::Result,
@@ -9,6 +10,7 @@ use dragonglass_dependencies::{
 use dragonglass_world::{Viewport, World};
 
 pub struct OpenGLRenderDevice {
+    pbr_shader: PbrShaderProgram,
     world_render: Option<WorldRender>,
     glow: glow::Context,
     egui_glow: egui_glow::EguiGlow,
@@ -25,7 +27,9 @@ impl OpenGLRenderDevice {
             glow::Context::from_loader_function(|symbol| context.get_proc_address(symbol))
         };
         let egui_glow = egui_glow::EguiGlow::new(context, &glow_context);
+        let pbr_shader = PbrShaderProgram::new()?;
         Ok(Self {
+            pbr_shader,
             world_render: None,
             glow: glow_context,
             egui_glow,
@@ -80,7 +84,7 @@ impl Renderer for OpenGLRenderDevice {
             self.viewport.width as f32 / std::cmp::max(self.viewport.height as u32, 1) as f32;
 
         if let Some(world_render) = self.world_render.as_ref() {
-            world_render.render(world, aspect_ratio)?;
+            world_render.render(world, aspect_ratio, &self.pbr_shader)?;
         }
 
         self.render_gui(context, gui_context, clipped_shapes);

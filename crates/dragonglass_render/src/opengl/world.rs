@@ -1,11 +1,13 @@
 use dragonglass_dependencies::{
     anyhow::{bail, Context, Result},
-    gl, nalgebra_glm as glm,
+    gl,
+    legion::world::EntryRef,
+    nalgebra_glm as glm,
 };
 use dragonglass_opengl::{GeometryBuffer, ShaderProgram, Texture};
 use dragonglass_world::{
-    AlphaMode, EntityStore, LightKind, Material, MeshRender, RigidBody, TextureFormat, Transform,
-    World,
+    AlphaMode, EntityStore, LightKind, Material, Mesh, MeshRender, RigidBody, TextureFormat,
+    Transform, World,
 };
 use std::{ptr, str};
 
@@ -331,7 +333,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
         texture
     }
 
-    pub fn render(&self, world: &World, aspect_ratio: f32) -> Result<()> {
+    pub fn enable_program(&self) {
         unsafe {
             gl::Enable(gl::CULL_FACE);
             gl::CullFace(gl::BACK);
@@ -340,10 +342,52 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
             gl::Enable(gl::DEPTH_TEST);
             gl::DepthFunc(gl::LEQUAL);
         }
-
-        self.geometry.bind();
         self.shader_program.use_program();
+    }
 
+    pub fn render(&self, world: &World, aspect_ratio: f32) -> Result<()> {
+        self.enable_program();
+        self.upload_lights(world)?;
+        self.update_uniforms(world, aspect_ratio)?;
+        self.geometry.bind();
+        for alpha_mode in [AlphaMode::Opaque, AlphaMode::Mask, AlphaMode::Blend].iter() {
+            for graph in world.scene.graphs.iter() {
+                graph.walk(|node_index| {
+                    let entity = graph[node_index];
+                    let entry = world.ecs.entry_ref(entity)?;
+                    let mesh_component = match entry.get_component::<MeshRender>() {
+                        Ok(mesh_component) => mesh_component,
+                        Err(_) => return Ok(()),
+                    };
+                    let mesh = match world.geometry.meshes.get(&mesh_component.name) {
+                        Some(mesh) => mesh,
+                        None => return Ok(()),
+                    };
+                    Self::set_blend_mode(alpha_mode);
+                    let global_transform = world.global_transform(graph, node_index)?;
+                    self.update_model_matrix(entry, world, global_transform)?;
+                    self.render_mesh(mesh, world, alpha_mode)?;
+                    Ok(())
+                })?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn set_blend_mode(alpha_mode: &AlphaMode) {
+        match alpha_mode {
+            AlphaMode::Opaque | AlphaMode::Mask => unsafe {
+                gl::Disable(gl::BLEND);
+            },
+            AlphaMode::Blend => unsafe {
+                gl::Enable(gl::BLEND);
+                gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+            },
+        }
+    }
+
+    pub fn upload_lights(&self, world: &World) -> Result<()> {
         let world_lights = world
             .lights()?
             .iter()
@@ -351,7 +395,6 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
             .collect::<Vec<_>>();
         for (index, light) in world_lights.iter().enumerate() {
             let name = |key: &str| format!("lights[{}].{}", index, key);
-
             self.shader_program
                 .set_uniform_vec3(&name("direction"), light.direction.as_slice());
             self.shader_program
@@ -369,163 +412,132 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
             self.shader_program
                 .set_uniform_int(&name("kind"), light.kind);
         }
-
         self.shader_program
             .set_uniform_int("numberOfLights", world_lights.len() as _);
+        Ok(())
+    }
 
+    fn update_uniforms(&self, world: &World, aspect_ratio: f32) -> Result<()> {
         let (projection, view) = world.active_camera_matrices(aspect_ratio)?;
         let camera_entity = world.active_camera()?;
         let camera_transform = world.entity_global_transform(camera_entity)?;
         self.shader_program
             .set_uniform_vec3("cameraPosition", camera_transform.translation.as_slice());
-
         self.shader_program
             .set_uniform_matrix4x4("projection", projection.as_slice());
         self.shader_program
             .set_uniform_matrix4x4("view", view.as_slice());
+        Ok(())
+    }
 
-        for alpha_mode in [AlphaMode::Opaque, AlphaMode::Mask, AlphaMode::Blend].iter() {
-            for graph in world.scene.graphs.iter() {
-                graph.walk(|node_index| {
-                    let entity = graph[node_index];
-
-                    let entry = world.ecs.entry_ref(entity)?;
-
-                    // Render rigid bodies at the transform specified by the physics world instead of the scenegraph
-                    // NOTE: The rigid body collider scaling should be the same as the scale of the entity transform
-                    //       otherwise this won't look right. It's probably best to just not scale entities that have rigid bodies
-                    //       with colliders on them.
-                    let model = match entry.get_component::<RigidBody>() {
-                        Ok(rigid_body) => {
-                            let body = world
-                                .physics
-                                .bodies
-                                .get(rigid_body.handle)
-                                .context("Failed to acquire physics body to render!")?;
-                            let position = body.position();
-                            let translation = position.translation.vector;
-                            let rotation = *position.rotation.quaternion();
-                            let scale =
-                                Transform::from(world.global_transform(graph, node_index)?).scale;
-                            Transform::new(translation, rotation, scale).matrix()
-                        }
-                        Err(_) => world.global_transform(graph, node_index)?,
-                    };
-
-                    self.shader_program
-                        .set_uniform_matrix4x4("model", model.as_slice());
-
-                    match world.ecs.entry_ref(entity)?.get_component::<MeshRender>() {
-                        Ok(mesh_render) => {
-                            if let Some(mesh) = world.geometry.meshes.get(&mesh_render.name) {
-                                match alpha_mode {
-                                    AlphaMode::Opaque | AlphaMode::Mask => unsafe {
-                                        gl::Disable(gl::BLEND);
-                                    },
-                                    AlphaMode::Blend => unsafe {
-                                        gl::Enable(gl::BLEND);
-                                        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-                                    },
-                                }
-
-                                for primitive in mesh.primitives.iter() {
-                                    let material = match primitive.material_index {
-                                        Some(material_index) => {
-                                            let primitive_material =
-                                                world.material_at_index(material_index)?;
-                                            if primitive_material.alpha_mode != *alpha_mode {
-                                                continue;
-                                            }
-                                            primitive_material.clone()
-                                        }
-                                        None => Material::default(),
-                                    };
-
-                                    self.shader_program.set_uniform_vec4(
-                                        "material.baseColorFactor",
-                                        material.base_color_factor.as_slice(),
-                                    );
-
-                                    self.shader_program.set_uniform_vec4(
-                                        "material.emissiveFactor",
-                                        glm::vec3_to_vec4(&material.emissive_factor).as_slice(),
-                                    );
-
-                                    self.shader_program.set_uniform_int(
-                                        "material.alphaMode",
-                                        material.alpha_mode as _,
-                                    );
-
-                                    self.shader_program.set_uniform_float(
-                                        "material.alphaCutoff",
-                                        material.alpha_cutoff,
-                                    );
-
-                                    self.shader_program.set_uniform_float(
-                                        "material.occlusionStrength",
-                                        material.occlusion_strength,
-                                    );
-
-                                    self.shader_program.set_uniform_float(
-                                        "material.metallicFactor",
-                                        material.metallic_factor,
-                                    );
-
-                                    self.shader_program.set_uniform_float(
-                                        "material.roughnessFactor",
-                                        material.roughness_factor,
-                                    );
-
-                                    for (index, descriptor) in
-                                        ["Diffuse", "Physical", "Normal", "Occlusion", "Emissive"]
-                                            .iter()
-                                            .enumerate()
-                                    {
-                                        let texture_index = match *descriptor {
-                                            "Diffuse" => material.color_texture_index,
-                                            "Physical" => material.metallic_roughness_texture_index,
-                                            "Normal" => material.normal_texture_index,
-                                            "Occlusion" => material.occlusion_texture_index,
-                                            "Emissive" => material.emissive_texture_index,
-                                            _ => bail!("Failed to find index for texture type!"),
-                                        };
-                                        let has_texture = texture_index > -1;
-
-                                        self.shader_program.set_uniform_bool(
-                                            &format!("material.has{}Texture", *descriptor),
-                                            has_texture,
-                                        );
-
-                                        self.shader_program.set_uniform_int(
-                                            &format!("{}Texture", *descriptor),
-                                            index as _,
-                                        );
-
-                                        if has_texture {
-                                            self.textures[texture_index as usize].bind(index as _);
-                                        }
-                                    }
-
-                                    let ptr: *const u8 = ptr::null_mut();
-                                    let ptr = unsafe {
-                                        ptr.add(primitive.first_index * std::mem::size_of::<u32>())
-                                    };
-                                    unsafe {
-                                        gl::DrawElements(
-                                            gl::TRIANGLES,
-                                            primitive.number_of_indices as _,
-                                            gl::UNSIGNED_INT,
-                                            ptr as *const _,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        Err(_) => return Ok(()),
+    fn render_mesh(&self, mesh: &Mesh, world: &World, alpha_mode: &AlphaMode) -> Result<()> {
+        for primitive in mesh.primitives.iter() {
+            let material = match primitive.material_index {
+                Some(material_index) => {
+                    let primitive_material = world.material_at_index(material_index)?;
+                    if primitive_material.alpha_mode != *alpha_mode {
+                        return Ok(());
                     }
+                    primitive_material.clone()
+                }
+                None => Material::default(),
+            };
 
-                    Ok(())
-                })?;
+            self.update_materials(&material)?;
+
+            let ptr: *const u8 = ptr::null_mut();
+            let ptr = unsafe { ptr.add(primitive.first_index * std::mem::size_of::<u32>()) };
+            unsafe {
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    primitive.number_of_indices as _,
+                    gl::UNSIGNED_INT,
+                    ptr as *const _,
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    fn update_model_matrix(
+        &self,
+        entry: EntryRef,
+        world: &World,
+        global_transform: glm::Mat4,
+    ) -> Result<()> {
+        // Render rigid bodies at the transform specified by the physics world instead of the scenegraph
+        // NOTE: The rigid body collider scaling should be the same as the scale of the entity transform
+        //       otherwise this won't look right. It's probably best to just not scale entities that have rigid bodies
+        //       with colliders on them.
+        let model = match entry.get_component::<RigidBody>() {
+            Ok(rigid_body) => {
+                let body = world
+                    .physics
+                    .bodies
+                    .get(rigid_body.handle)
+                    .context("Failed to acquire physics body to render!")?;
+                let position = body.position();
+                let translation = position.translation.vector;
+                let rotation = *position.rotation.quaternion();
+                let scale = Transform::from(global_transform).scale;
+                Transform::new(translation, rotation, scale).matrix()
+            }
+            Err(_) => global_transform,
+        };
+        self.shader_program
+            .set_uniform_matrix4x4("model", model.as_slice());
+        Ok(())
+    }
+
+    fn update_materials(&self, material: &Material) -> Result<()> {
+        self.shader_program.set_uniform_vec4(
+            "material.baseColorFactor",
+            material.base_color_factor.as_slice(),
+        );
+
+        self.shader_program.set_uniform_vec4(
+            "material.emissiveFactor",
+            glm::vec3_to_vec4(&material.emissive_factor).as_slice(),
+        );
+
+        self.shader_program
+            .set_uniform_int("material.alphaMode", material.alpha_mode as _);
+
+        self.shader_program
+            .set_uniform_float("material.alphaCutoff", material.alpha_cutoff);
+
+        self.shader_program
+            .set_uniform_float("material.occlusionStrength", material.occlusion_strength);
+
+        self.shader_program
+            .set_uniform_float("material.metallicFactor", material.metallic_factor);
+
+        self.shader_program
+            .set_uniform_float("material.roughnessFactor", material.roughness_factor);
+
+        for (index, descriptor) in ["Diffuse", "Physical", "Normal", "Occlusion", "Emissive"]
+            .iter()
+            .enumerate()
+        {
+            let texture_index = match *descriptor {
+                "Diffuse" => material.color_texture_index,
+                "Physical" => material.metallic_roughness_texture_index,
+                "Normal" => material.normal_texture_index,
+                "Occlusion" => material.occlusion_texture_index,
+                "Emissive" => material.emissive_texture_index,
+                _ => bail!("Failed to find index for texture type!"),
+            };
+            let has_texture = texture_index > -1;
+
+            self.shader_program
+                .set_uniform_bool(&format!("material.has{}Texture", *descriptor), has_texture);
+
+            self.shader_program
+                .set_uniform_int(&format!("{}Texture", *descriptor), index as _);
+
+            if has_texture {
+                self.textures[texture_index as usize].bind(index as _);
             }
         }
 

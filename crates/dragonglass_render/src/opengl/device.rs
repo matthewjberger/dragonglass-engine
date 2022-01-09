@@ -37,6 +37,26 @@ impl OpenGLRenderDevice {
             },
         })
     }
+
+    pub fn render_gui(
+        &mut self,
+        context: &ContextWrapper<PossiblyCurrent, Window>,
+        gui_context: &CtxRef,
+        clipped_shapes: Vec<ClippedShape>,
+    ) {
+        unsafe { gl::Enable(gl::FRAMEBUFFER_SRGB) };
+        let clipped_meshes = gui_context.tessellate(clipped_shapes);
+        let dimensions: [u32; 2] = context.window().inner_size().into();
+        self.egui_glow
+            .painter
+            .upload_egui_texture(&self.glow, &gui_context.font_image());
+        self.egui_glow.painter.paint_meshes(
+            &self.glow,
+            dimensions,
+            gui_context.pixels_per_point(),
+            clipped_meshes,
+        );
+    }
 }
 
 impl Renderer for OpenGLRenderDevice {
@@ -63,18 +83,7 @@ impl Renderer for OpenGLRenderDevice {
             world_render.render(world, aspect_ratio)?;
         }
 
-        unsafe { gl::Enable(gl::FRAMEBUFFER_SRGB) };
-        let clipped_meshes = gui_context.tessellate(clipped_shapes);
-        let dimensions: [u32; 2] = context.window().inner_size().into();
-        self.egui_glow
-            .painter
-            .upload_egui_texture(&self.glow, &gui_context.font_image());
-        self.egui_glow.painter.paint_meshes(
-            &self.glow,
-            dimensions,
-            gui_context.pixels_per_point(),
-            clipped_meshes,
-        );
+        self.render_gui(context, gui_context, clipped_shapes);
 
         context.swap_buffers()?;
 

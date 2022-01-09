@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use dragonglass::{
     app::{run_application, App, AppState, MouseOrbit},
     dependencies::{
@@ -34,6 +36,49 @@ impl Editor {
                 .context("Failed to find entity!")?;
             log::info!("Deselecting entity: {:?}", entity);
             entry.remove_component::<Selected>();
+        }
+
+        Ok(())
+    }
+
+    pub fn load_world_from_file(&self, path: &PathBuf, app_state: &mut AppState) -> Result<()> {
+        let raw_path = match path.to_str() {
+            Some(raw_path) => raw_path,
+            None => return Ok(()),
+        };
+
+        if let Some(extension) = path.extension() {
+            match extension.to_str() {
+                Some("glb") | Some("gltf") => {
+                    load_gltf(raw_path, app_state.world)?;
+                    app_state.world.add_default_light()?;
+                    app_state.renderer.load_world(app_state.world)?;
+                }
+                // Some("hdr") => Self::load_hdr(raw_path, application)?,
+                Some("dga") => {
+                    // TODO: Load from dga
+                    log::info!("Loaded world!");
+                }
+                _ => log::warn!(
+                    "File extension {:#?} is not a valid '.dga', '.glb', '.gltf', or '.hdr' extension",
+                    extension
+                ),
+            }
+
+            let mut query = <(Entity, &MeshRender)>::query();
+            let entities = query
+                .iter(&mut app_state.world.ecs)
+                .map(|(e, _)| *e)
+                .collect::<Vec<_>>();
+
+            for entity in entities.into_iter() {
+                app_state
+                    .world
+                    .add_rigid_body(entity, RigidBodyType::Static)?;
+                app_state
+                    .world
+                    .add_trimesh_collider(entity, InteractionGroups::all())?;
+            }
         }
 
         Ok(())
@@ -124,45 +169,7 @@ impl App for Editor {
         path: &std::path::PathBuf,
         app_state: &mut AppState,
     ) -> Result<()> {
-        let raw_path = match path.to_str() {
-            Some(raw_path) => raw_path,
-            None => return Ok(()),
-        };
-
-        if let Some(extension) = path.extension() {
-            match extension.to_str() {
-                Some("glb") | Some("gltf") => {
-                    load_gltf(raw_path, app_state.world)?;
-                    app_state.world.add_default_light()?;
-                    app_state.renderer.load_world(app_state.world)?;
-
-                    let mut query = <(Entity, &MeshRender)>::query();
-                    let entities = query
-                        .iter(&mut app_state.world.ecs)
-                        .map(|(e, _)| *e)
-                        .collect::<Vec<_>>();
-
-                    for entity in entities.into_iter() {
-                        app_state
-                            .world
-                            .add_rigid_body(entity, RigidBodyType::Static)?;
-                        app_state
-                            .world
-                            .add_trimesh_collider(entity, InteractionGroups::all())?;
-                    }
-                }
-                // Some("hdr") => Self::load_hdr(raw_path, application)?,
-                Some("dga") => {
-                    // TODO: Load from dga
-                    log::info!("Loaded world!");
-                }
-                _ => log::warn!(
-                    "File extension {:#?} is not a valid '.dga', '.glb', '.gltf', or '.hdr' extension",
-                    extension
-                ),
-            }
-        }
-
+        self.load_world_from_file(path, app_state)?;
         Ok(())
     }
 

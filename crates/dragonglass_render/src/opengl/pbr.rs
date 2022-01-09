@@ -2,7 +2,7 @@ use super::world::WorldShader;
 use crate::opengl::world::Light;
 use dragonglass_dependencies::{
     anyhow::{bail, Result},
-    gl, nalgebra_glm as glm,
+    nalgebra_glm as glm,
 };
 use dragonglass_opengl::{ShaderProgram, Texture};
 use dragonglass_world::{Material, World};
@@ -68,18 +68,8 @@ impl PbrShader {
 impl WorldShader for PbrShader {
     fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
         self.shader_program.use_program();
-
-        unsafe {
-            gl::Enable(gl::CULL_FACE);
-            gl::CullFace(gl::BACK);
-            gl::FrontFace(gl::CCW);
-            gl::Enable(gl::DEPTH_TEST);
-            gl::DepthFunc(gl::LEQUAL);
-        }
-
         self.upload_lights(world)?;
         self.update_uniforms(world, aspect_ratio)?;
-
         Ok(())
     }
 

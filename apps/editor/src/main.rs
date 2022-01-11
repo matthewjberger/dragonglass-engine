@@ -8,16 +8,20 @@ use dragonglass::{
         env_logger,
         legion::IntoQuery,
         log,
+        petgraph::{graph::NodeIndex, EdgeDirection::Outgoing},
         rapier3d::prelude::{InteractionGroups, RigidBodyType},
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
-    world::{load_gltf, Entity, EntityStore, MeshRender, Selected, Transform, Viewport},
+    world::{
+        load_gltf, Entity, EntityStore, MeshRender, Name, SceneGraph, Selected, Transform, Viewport,
+    },
 };
 
 #[derive(Default)]
 struct Editor {
     camera: MouseOrbit,
     moving_selected: bool,
+    selected_entity: Option<Entity>,
 }
 
 impl Editor {
@@ -87,6 +91,35 @@ impl Editor {
 
         Ok(())
     }
+
+    fn print_node(&mut self, graph: &SceneGraph, index: NodeIndex, ui: &mut Ui) {
+        let entity = graph[index];
+        // let label = app_state
+        //     .world
+        //     .ecs
+        //     .entry_ref(entity)
+        //     .expect("Failed to find entity!")
+        //     .get_component::<Name>()
+        //     .ok()
+        //     .unwrap_or(&Name(format!("{:?}", entity)))
+        //     .0;
+        let label = format!("{:?}", entity);
+
+        let header = egui::CollapsingHeader::new(label.to_string())
+            .selectable(true)
+            .selected(self.selected_entity == Some(entity))
+            .show(ui, |ui| {
+                let mut neighbors = graph.neighbors(index, Outgoing);
+                while let Some(child) = neighbors.next_node(&graph.0) {
+                    self.print_node(graph, child, ui);
+                }
+            })
+            .header_response;
+
+        if header.clicked() {
+            self.selected_entity = Some(entity);
+        }
+    }
 }
 
 impl App for Editor {
@@ -150,8 +183,13 @@ impl App for Editor {
         egui::SidePanel::left("left_panel")
             .resizable(true)
             .show(ctx, |ui| {
-                ui.heading("Left Panel");
-                ui.allocate_space(ui.available_size());
+                ui.heading(&app_state.world.scene.name);
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    for graph in app_state.world.scene.graphs.iter_mut() {
+                        self.print_node(graph, NodeIndex::new(0), ui);
+                    }
+                    ui.allocate_space(ui.available_size());
+                });
             });
 
         egui::SidePanel::right("right_panel")

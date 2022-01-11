@@ -723,6 +723,17 @@ impl Scene {
             None => bail!("Failed to find default scenegraph in scene: {}!", self.name),
         }
     }
+
+    #[allow(dead_code)]
+    pub fn recurse_scenegraphs(
+        &self,
+        action: &mut impl FnMut(&SceneGraph, NodeIndex) -> Result<()>,
+    ) -> Result<()> {
+        for graph in self.graphs.iter() {
+            graph.recurse(NodeIndex::new(0), action)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
@@ -1482,6 +1493,20 @@ impl SceneGraph {
 
     pub fn find_node(&self, entity: Entity) -> Option<NodeIndex> {
         self.0.node_indices().find(|i| self[*i] == entity)
+    }
+
+    pub fn recurse(
+        &self,
+        index: NodeIndex,
+        action: &mut impl FnMut(&SceneGraph, NodeIndex) -> Result<()>,
+    ) -> Result<()> {
+        action(&self, index)?;
+        let mut neighbors = self.neighbors(index, Outgoing);
+        while let Some(child) = neighbors.next_node(&self.0) {
+            action(&self, index)?;
+            self.recurse(child, action)?;
+        }
+        Ok(())
     }
 }
 

@@ -108,6 +108,23 @@ impl Editor {
 
         let selected = self.selected_entity == Some(entity);
 
+        let context_menu = |ui: &mut Ui| {
+            if ui.button("Rename...").clicked() {
+                // UI TODO: Allow renaming entities
+                ui.close_menu();
+            }
+
+            if ui.button("Delete...").clicked() {
+                // UI TODO: Allow deleting entities
+                ui.close_menu();
+            }
+
+            if ui.button("Add Child...").clicked() {
+                // UI TODO: Allow adding child entities
+                ui.close_menu();
+            }
+        };
+
         let response = if graph.has_children(index) {
             egui::CollapsingHeader::new(label.to_string())
                 .selectable(true)
@@ -119,12 +136,18 @@ impl Editor {
                     }
                 })
                 .header_response
+                .context_menu(context_menu)
         } else {
             ui.add(SelectableLabel::new(selected, label.to_string()))
+                .context_menu(context_menu)
         };
 
         if response.clicked() {
             self.selected_entity = Some(entity);
+        }
+
+        if response.double_clicked() {
+            // TODO: Allow renaming entity
         }
     }
 }

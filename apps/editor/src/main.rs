@@ -4,7 +4,9 @@ use dragonglass::{
     app::{run_application, App, AppState, MouseOrbit},
     dependencies::{
         anyhow::{Context, Result},
-        egui::{self, global_dark_light_mode_switch, Id, LayerId, SelectableLabel, Ui},
+        egui::{
+            self, global_dark_light_mode_switch, Align, DragValue, Id, LayerId, SelectableLabel, Ui,
+        },
         env_logger,
         legion::IntoQuery,
         log,
@@ -187,7 +189,7 @@ impl App for Editor {
                 });
             });
 
-        egui::SidePanel::left("left_panel")
+        egui::SidePanel::left("scene_explorer")
             .resizable(true)
             .show(ctx, |ui| {
                 ui.heading(&app_state.world.scene.name);
@@ -201,17 +203,57 @@ impl App for Editor {
                 });
             });
 
-        egui::SidePanel::right("right_panel")
+        egui::SidePanel::right("inspector")
             .resizable(true)
             .show(ctx, |ui| {
-                ui.heading("Right Panel");
+                ui.heading("Inspector");
+                if let Some(entity) = self.selected_entity {
+                    ui.heading("Transform");
+
+                    let mut should_sync = false;
+
+                    ui.with_layout(egui::Layout::top_down(Align::LEFT), |ui| {
+                        let mut entry = app_state
+                            .world
+                            .ecs
+                            .entry(entity)
+                            .expect("Failed to find entity!");
+
+                        let transform = entry
+                            .get_component_mut::<Transform>()
+                            .expect("Entity does not have a transform!");
+
+                        ui.label("X");
+                        let x_response =
+                            ui.add(DragValue::new(&mut transform.translation.x).speed(0.1));
+
+                        ui.label("Y");
+                        let y_response =
+                            ui.add(DragValue::new(&mut transform.translation.y).speed(0.1));
+
+                        ui.label("Z");
+                        let z_response =
+                            ui.add(DragValue::new(&mut transform.translation.z).speed(0.1));
+
+                        should_sync =
+                            x_response.changed() || y_response.changed() || z_response.changed();
+                    });
+
+                    if should_sync {
+                        app_state
+                            .world
+                            .sync_rigid_body_to_transform(entity)
+                            .expect("Failed to sync rigid body to transform!");
+                    }
+                }
+
                 ui.allocate_space(ui.available_size());
             });
 
-        egui::TopBottomPanel::bottom("bottom_panel")
+        egui::TopBottomPanel::bottom("console")
             .resizable(true)
             .show(ctx, |ui| {
-                ui.heading("Bottom Panel");
+                ui.heading("Console");
                 ui.allocate_space(ui.available_size());
             });
 

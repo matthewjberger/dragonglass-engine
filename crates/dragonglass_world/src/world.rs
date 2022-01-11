@@ -118,6 +118,7 @@ impl World {
         transform.look_at(&(-position), &glm::Vec3::y());
         let light_entity = self.ecs.push((
             transform,
+            Name("Default Directional Light".to_string()),
             Light {
                 color: glm::vec3(200.0, 200.0, 200.0),
                 kind: LightKind::Point,

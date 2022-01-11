@@ -92,6 +92,7 @@ impl World {
 
         let camera_entity = self.ecs.push((
             transform,
+            Name("Default Camera".to_string()),
             Camera {
                 name: Self::MAIN_CAMERA_NAME.to_string(),
                 projection: Projection::Perspective(PerspectiveCamera {

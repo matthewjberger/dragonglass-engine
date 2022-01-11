@@ -5,13 +5,15 @@ use dragonglass::{
     dependencies::{
         anyhow::{Context, Result},
         egui::{
-            self, global_dark_light_mode_switch, Align, DragValue, Id, LayerId, SelectableLabel, Ui,
+            self, global_dark_light_mode_switch, menu, Align, DragValue, Id, LayerId,
+            SelectableLabel, Ui,
         },
         env_logger,
         legion::IntoQuery,
         log,
         petgraph::{graph::NodeIndex, EdgeDirection::Outgoing},
         rapier3d::prelude::{InteractionGroups, RigidBodyType},
+        rfd::FileDialog,
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
     world::{
@@ -59,7 +61,6 @@ impl Editor {
             match extension.to_str() {
                 Some("glb") | Some("gltf") => {
                     load_gltf(raw_path, app_state.world)?;
-
                 }
                 // Some("hdr") => Self::load_hdr(raw_path, application)?,
                 Some("dga") => {
@@ -73,7 +74,6 @@ impl Editor {
             }
 
             // TODO: Probably don't want this added every time
-            app_state.world.add_default_light()?;
             app_state.renderer.load_world(app_state.world)?;
 
             let mut query = <(Entity, &MeshRender)>::query();
@@ -134,9 +134,8 @@ impl App for Editor {
         true
     }
 
-    fn initialize(&mut self, app_state: &mut AppState) -> Result<()> {
+    fn initialize(&mut self, _app_state: &mut AppState) -> Result<()> {
         env_logger::init();
-        app_state.world.add_default_light()?;
         Ok(())
     }
 
@@ -183,7 +182,26 @@ impl App for Editor {
             .resizable(true)
             .show(ctx, |ui| {
                 egui::menu::bar(ui, |ui| {
-                    global_dark_light_mode_switch(ui);
+                    menu::bar(ui, |ui| {
+                        global_dark_light_mode_switch(ui);
+                        ui.menu_button("File", |ui| {
+                            if ui.button("Open / Import").clicked() {
+                                let path = FileDialog::new()
+                                    .add_filter("dragonglass_asset", &["dga"])
+                                    .set_directory("/")
+                                    .pick_file();
+                                if let Some(path) = path {
+                                    self.load_world_from_file(&path, app_state)
+                                        .expect("Failed to load asset!");
+                                }
+                                ui.close_menu();
+                            }
+
+                            if ui.button("Quit").clicked() {
+                                app_state.system.exit_requested = true;
+                            }
+                        });
+                    });
                 });
             });
 

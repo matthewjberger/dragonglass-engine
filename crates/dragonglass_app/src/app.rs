@@ -120,6 +120,11 @@ fn run_loop(
     }
 
     match event {
+        Event::NewEvents(_) => {
+            if app_state.system.exit_requested {
+                *control_flow = ControlFlow::Exit;
+            }
+        }
         Event::WindowEvent { ref event, .. } => match event {
             WindowEvent::DroppedFile(ref path) => app.on_file_dropped(path, &mut app_state)?,
             WindowEvent::Resized(physical_size) => {

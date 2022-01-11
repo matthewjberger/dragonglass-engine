@@ -25,5 +25,6 @@ nalgebra-glm = {version = "0.16.0", features = ["serde-serialize"]}
 petgraph = {version = "0.6.0", features = ["serde-1"]}
 rapier3d = {version = "0.12.0-alpha.0", features = ["serde-serialize", "wasm-bindgen"]}
 raw-window-handle = "0.4.2"
+rfd = "0.6.3"
 serde = "1.0.133"
 winit = "0.26.1"

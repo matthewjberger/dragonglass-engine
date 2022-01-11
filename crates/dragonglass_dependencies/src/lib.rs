@@ -19,5 +19,6 @@ pub use nalgebra_glm;
 pub use petgraph;
 pub use rapier3d;
 pub use raw_window_handle;
+pub use rfd;
 pub use serde;
 pub use winit;

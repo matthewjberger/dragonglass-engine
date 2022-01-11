@@ -108,7 +108,7 @@ impl Editor {
 
         let selected = self.selected_entity == Some(entity);
 
-        let clicked = if graph.has_children(index) {
+        let response = if graph.has_children(index) {
             egui::CollapsingHeader::new(label.to_string())
                 .selectable(true)
                 .selected(selected)
@@ -119,13 +119,11 @@ impl Editor {
                     }
                 })
                 .header_response
-                .clicked()
         } else {
             ui.add(SelectableLabel::new(selected, label.to_string()))
-                .clicked()
         };
 
-        if clicked {
+        if response.clicked() {
             self.selected_entity = Some(entity);
         }
     }

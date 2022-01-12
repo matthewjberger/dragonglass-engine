@@ -20,6 +20,13 @@ impl PbrShader {
         Ok(Self { shader_program })
     }
 
+    pub fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
+        self.shader_program.use_program();
+        self.upload_lights(world)?;
+        self.update_uniforms(world, aspect_ratio)?;
+        Ok(())
+    }
+
     fn upload_lights(&self, world: &World) -> Result<()> {
         let world_lights = world
             .lights()?
@@ -60,13 +67,6 @@ impl PbrShader {
             .set_uniform_matrix4x4("projection", projection.as_slice());
         self.shader_program
             .set_uniform_matrix4x4("view", view.as_slice());
-        Ok(())
-    }
-
-    pub fn update(&self, world: &World, aspect_ratio: f32) -> Result<()> {
-        self.shader_program.use_program();
-        self.upload_lights(world)?;
-        self.update_uniforms(world, aspect_ratio)?;
         Ok(())
     }
 

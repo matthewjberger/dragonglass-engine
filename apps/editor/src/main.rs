@@ -182,14 +182,21 @@ impl App for Editor {
                 .map(|(e, _)| (*e))
                 .collect::<Vec<_>>();
             for entity in entities.into_iter() {
+                let (right, up) = {
+                    let camera_entity = app_state.world.active_camera()?;
+                    let camera_entry = app_state.world.ecs.entry_ref(camera_entity)?;
+                    let camera_transform = camera_entry.get_component::<Transform>()?;
+                    (camera_transform.right(), camera_transform.up())
+                };
+
                 let mut entry = app_state.world.ecs.entry_mut(entity)?;
                 let speed = 10.0;
                 let transform = entry.get_component_mut::<Transform>()?;
                 let mouse_delta =
                     app_state.input.mouse.position_delta * app_state.system.delta_time as f32;
                 if app_state.input.mouse.is_right_clicked {
-                    transform.translation += transform.right() * mouse_delta.x * speed;
-                    transform.translation += transform.up() * -mouse_delta.y * speed;
+                    transform.translation += right * mouse_delta.x * speed;
+                    transform.translation += up * -mouse_delta.y * speed;
                 }
                 app_state.world.sync_rigid_body_to_transform(entity)?;
             }

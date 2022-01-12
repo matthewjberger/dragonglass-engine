@@ -8,6 +8,8 @@ use dragonglass_dependencies::{
         window::WindowBuilder,
         ContextBuilder,
     },
+    image::io::Reader,
+    winit::window::{Fullscreen, Icon},
 };
 use dragonglass_gui::{Gui, ScreenDescriptor};
 use dragonglass_render::{create_render_backend, Backend};
@@ -49,17 +51,52 @@ pub trait App {
     }
 }
 
-pub fn run_application(mut app: impl App + 'static, title: &str) -> Result<()> {
+pub struct AppConfig {
+    pub width: u32,
+    pub height: u32,
+    pub is_fullscreen: bool,
+    pub title: String,
+    pub icon: Option<String>,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            width: 1920,
+            height: 1080,
+            is_fullscreen: false,
+            title: "Dragonglass Application".to_string(),
+            icon: None,
+        }
+    }
+}
+
+pub fn run_application(mut app: impl App + 'static, config: &AppConfig) -> Result<()> {
     let event_loop = EventLoop::new();
-    let window_builder = WindowBuilder::new()
-        .with_title(title)
-        .with_inner_size(PhysicalSize::new(800, 600));
+    let mut window_builder = WindowBuilder::new()
+        .with_title(&config.title)
+        .with_inner_size(PhysicalSize::new(config.width, config.height));
+
+    if let Some(icon_path) = config.icon.as_ref() {
+        let image = Reader::open(icon_path)?.decode()?.into_rgba8();
+        let (width, height) = image.dimensions();
+        let icon = Icon::from_rgba(image.into_raw(), width, height)?;
+        window_builder = window_builder.with_window_icon(Some(icon));
+    }
 
     let windowed_context = ContextBuilder::new()
         .with_srgb(true)
         .build_windowed(window_builder, &event_loop)?;
 
     let inner_size = windowed_context.window().inner_size();
+
+    if config.is_fullscreen {
+        windowed_context
+            .window()
+            .set_fullscreen(Some(Fullscreen::Borderless(
+                windowed_context.window().primary_monitor(),
+            )));
+    }
 
     let screen_descriptor = ScreenDescriptor {
         dimensions: inner_size,

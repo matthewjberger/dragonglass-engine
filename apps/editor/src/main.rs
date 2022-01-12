@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use dragonglass::{
-    app::{run_application, App, AppState, MouseOrbit},
+    app::{run_application, App, AppConfig, AppState, MouseOrbit},
     dependencies::{
         anyhow::{Context, Result},
         egui::{
@@ -17,8 +17,8 @@ use dragonglass::{
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
     world::{
-        load_gltf, Ecs, Entity, EntityStore, MeshRender, Name, SceneGraph, Selected, Transform,
-        Viewport,
+        load_gltf, Ecs, Entity, EntityStore, MeshRender, Name, RigidBody, SceneGraph, Selected,
+        Transform, Viewport,
     },
 };
 
@@ -211,12 +211,23 @@ impl App for Editor {
                             if ui.button("Open / Import").clicked() {
                                 let path = FileDialog::new()
                                     .add_filter("dragonglass_asset", &["dga"])
+                                    .add_filter("gltf_asset", &["glb", "gltf"])
                                     .set_directory("/")
                                     .pick_file();
                                 if let Some(path) = path {
                                     self.load_world_from_file(&path, app_state)
                                         .expect("Failed to load asset!");
                                 }
+                                ui.close_menu();
+                            }
+
+                            if ui.button("Save").clicked() {
+                                self.deselect_all(app_state)
+                                    .expect("Failed to deselect all entities!");
+                                app_state
+                                    .world
+                                    .save("map.dga")
+                                    .expect("Failed to save world!");
                                 ui.close_menu();
                             }
 
@@ -251,13 +262,13 @@ impl App for Editor {
 
                     let mut should_sync = false;
 
-                    ui.with_layout(egui::Layout::top_down(Align::LEFT), |ui| {
-                        let mut entry = app_state
-                            .world
-                            .ecs
-                            .entry(entity)
-                            .expect("Failed to find entity!");
+                    let mut entry = app_state
+                        .world
+                        .ecs
+                        .entry(entity)
+                        .expect("Failed to find entity!");
 
+                    ui.with_layout(egui::Layout::top_down(Align::LEFT), |ui| {
                         let transform = entry
                             .get_component_mut::<Transform>()
                             .expect("Entity does not have a transform!");
@@ -278,7 +289,7 @@ impl App for Editor {
                             x_response.changed() || y_response.changed() || z_response.changed();
                     });
 
-                    if should_sync {
+                    if should_sync && entry.get_component::<RigidBody>().is_ok() {
                         app_state
                             .world
                             .sync_rigid_body_to_transform(entity)
@@ -332,18 +343,13 @@ impl App for Editor {
     fn on_key(&mut self, input: KeyboardInput, app_state: &mut AppState) -> Result<()> {
         if input.virtual_keycode == Some(VirtualKeyCode::C) && input.state == ElementState::Pressed
         {
+            // TODO: This crashes for some reason
             app_state.world.clear()?;
         }
 
         if input.virtual_keycode == Some(VirtualKeyCode::G) && input.state == ElementState::Pressed
         {
             self.moving_selected = !self.moving_selected;
-        }
-
-        // TODO: Move this into the gui
-        if input.virtual_keycode == Some(VirtualKeyCode::S) && input.state == ElementState::Pressed
-        {
-            app_state.world.save("map.dga")?;
         }
 
         Ok(())
@@ -387,5 +393,13 @@ impl App for Editor {
 }
 
 fn main() -> Result<()> {
-    run_application(Editor::default(), "Dragonglass Editor")
+    run_application(
+        Editor::default(),
+        &AppConfig {
+            icon: Some("assets/icon/icon.png".to_string()),
+            title: "Dragonglass Editor".to_string(),
+            is_fullscreen: true,
+            ..Default::default()
+        },
+    )
 }

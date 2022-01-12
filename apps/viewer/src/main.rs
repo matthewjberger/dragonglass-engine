@@ -1,5 +1,5 @@
 use dragonglass::{
-    app::{run_application, App, AppState, MouseOrbit},
+    app::{run_application, App, AppConfig, AppState, MouseOrbit},
     dependencies::{
         anyhow::Result,
         egui::{self, Id, LayerId, Ui},
@@ -130,5 +130,12 @@ impl App for Viewer {
 }
 
 fn main() -> Result<()> {
-    run_application(Viewer::default(), "Dragonglass Viewer")
+    run_application(
+        Viewer::default(),
+        &AppConfig {
+            icon: Some("assets/icon/icon.png".to_string()),
+            title: "Dragonglass Viewer".to_string(),
+            ..Default::default()
+        },
+    )
 }

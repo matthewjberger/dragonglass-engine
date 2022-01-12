@@ -1,5 +1,5 @@
 use dragonglass::{
-    app::{run_application, App, AppState, MouseLook},
+    app::{run_application, App, AppConfig, AppState, MouseLook},
     dependencies::{
         anyhow::{Context, Result},
         legion::IntoQuery,
@@ -112,7 +112,14 @@ impl App for Game {
 }
 
 fn main() -> Result<()> {
-    run_application(Game::default(), "Example Game")
+    run_application(
+        Game::default(),
+        &AppConfig {
+            icon: Some("assets/icon/icon.png".to_string()),
+            title: "Example Game".to_string(),
+            ..Default::default()
+        },
+    )
 }
 
 fn update_player(app_state: &mut AppState, entity: Entity) -> Result<()> {

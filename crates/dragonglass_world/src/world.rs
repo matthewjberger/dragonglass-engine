@@ -1,4 +1,4 @@
-use crate::{Name, RigidBody, Selected, WorldPhysics};
+use crate::{Name, RigidBody, WorldPhysics};
 use dragonglass_dependencies::{
     anyhow::{bail, Context, Result},
     bincode,
@@ -42,7 +42,6 @@ lazy_static! {
         registry.register::<Skin>("skin".to_string());
         registry.register::<Light>("light".to_string());
         registry.register::<RigidBody>("rigid_body".to_string());
-        registry.register::<Selected>("selected".to_string());
         Arc::new(RwLock::new(registry))
     };
     pub static ref ENTITY_SERIALIZER: Canon = Canon::default();

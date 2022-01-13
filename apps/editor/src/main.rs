@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use dragonglass::{
     app::{run_application, App, AppConfig, AppState, MouseOrbit},
     dependencies::{
@@ -14,13 +12,19 @@ use dragonglass::{
         petgraph::{graph::NodeIndex, EdgeDirection::Outgoing},
         rapier3d::prelude::{InteractionGroups, RigidBodyType},
         rfd::FileDialog,
+        serde::{Deserialize, Serialize},
         winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode},
     },
     world::{
-        load_gltf, Ecs, Entity, EntityStore, MeshRender, Name, RigidBody, SceneGraph, Selected,
-        Transform, Viewport,
+        load_gltf, register_component, Ecs, Entity, EntityStore, MeshRender, Name, RigidBody,
+        SceneGraph, Transform, Viewport,
     },
 };
+use std::path::PathBuf;
+
+#[derive(Default, Serialize, Deserialize)]
+#[serde(crate = "dragonglass::dependencies::serde")]
+pub struct Selected;
 
 #[derive(Default)]
 struct Editor {
@@ -159,6 +163,7 @@ impl App for Editor {
 
     fn initialize(&mut self, _app_state: &mut AppState) -> Result<()> {
         env_logger::init();
+        register_component::<Selected>("selected")?;
         Ok(())
     }
 
@@ -229,8 +234,7 @@ impl App for Editor {
                             }
 
                             if ui.button("Save").clicked() {
-                                self.deselect_all(app_state)
-                                    .expect("Failed to deselect all entities!");
+                                // TODO: Remove default light
                                 app_state
                                     .world
                                     .save("map.dga")
@@ -405,7 +409,6 @@ fn main() -> Result<()> {
         &AppConfig {
             icon: Some("assets/icon/icon.png".to_string()),
             title: "Dragonglass Editor".to_string(),
-            is_fullscreen: true,
             ..Default::default()
         },
     )

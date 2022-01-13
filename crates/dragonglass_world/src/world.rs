@@ -10,7 +10,8 @@ use dragonglass_dependencies::{
     },
     lazy_static::lazy_static,
     legion::{
-        self, serialize::set_entity_serializer, serialize::Canon, EntityStore, IntoQuery, Registry,
+        self, serialize::set_entity_serializer, serialize::Canon, storage::Component, EntityStore,
+        IntoQuery, Registry,
     },
     log,
     nalgebra::{linalg::QR, Isometry3, Point, Point3, Translation3, UnitQuaternion},
@@ -45,6 +46,16 @@ lazy_static! {
         Arc::new(RwLock::new(registry))
     };
     pub static ref ENTITY_SERIALIZER: Canon = Canon::default();
+}
+
+pub fn register_component<T: Component + Serialize + for<'de> Deserialize<'de>>(
+    key: &str,
+) -> Result<()> {
+    let mut registry = COMPONENT_REGISTRY
+        .write()
+        .expect("Failed to access component registry!");
+    registry.register::<T>(key.to_string());
+    Ok(())
 }
 
 pub type Ecs = legion::World;

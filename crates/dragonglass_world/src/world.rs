@@ -426,6 +426,7 @@ impl World {
         let transform = self.entity_global_transform(entity)?;
         let mesh = &self.geometry.meshes[&mesh.name];
 
+        // TODO: Add collider handles to component
         let rigid_body_handle = self
             .ecs
             .entry_ref(entity)?
@@ -478,6 +479,14 @@ impl World {
             .entry(entity)
             .context("")?
             .add_component(RigidBody::new(handle));
+        Ok(())
+    }
+
+    pub fn remove_rigid_body(&mut self, entity: Entity) -> Result<()> {
+        let mut entry = self.ecs.entry(entity).context("Failed to find entity!")?;
+        let rigid_body_handle = entry.get_component::<RigidBody>()?.handle;
+        entry.remove_component::<RigidBody>();
+        self.physics.remove_rigid_body(rigid_body_handle);
         Ok(())
     }
 

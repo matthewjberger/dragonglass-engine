@@ -1,4 +1,6 @@
-use dragonglass_dependencies::rapier3d::prelude::{ImpulseJointSet, MultibodyJointSet};
+use dragonglass_dependencies::rapier3d::prelude::{
+    ImpulseJointSet, MultibodyJointSet, RigidBodyHandle,
+};
 pub use dragonglass_dependencies::{
     rapier3d::{
         self,
@@ -71,6 +73,16 @@ impl WorldPhysics {
             ccd_solver: CCDSolver::new(),
             pipeline: PhysicsPipeline::new(),
         }
+    }
+
+    pub fn remove_rigid_body(&mut self, handle: RigidBodyHandle) {
+        self.bodies.remove(
+            handle,
+            &mut self.islands,
+            &mut self.colliders,
+            &mut self.impulse_joints,
+            &mut self.multibody_joints,
+        );
     }
 
     pub fn set_gravity(&mut self, gravity: Vector3<f32>) {

@@ -220,10 +220,22 @@ impl App for Editor {
                     menu::bar(ui, |ui| {
                         global_dark_light_mode_switch(ui);
                         ui.menu_button("File", |ui| {
-                            if ui.button("Open / Import").clicked() {
+                            // TODO: Distinguish between loading levels and importing assets
+                            if ui.button("Load Level").clicked() {
                                 let path = FileDialog::new()
-                                    .add_filter("dragonglass_asset", &["dga"])
-                                    .add_filter("gltf_asset", &["glb", "gltf"])
+                                    .add_filter("Dragonglass Asset", &["dga"])
+                                    .set_directory("/")
+                                    .pick_file();
+                                if let Some(path) = path {
+                                    self.load_world_from_file(&path, app_state)
+                                        .expect("Failed to load asset!");
+                                }
+                                ui.close_menu();
+                            }
+
+                            if ui.button("Import gltf/glb").clicked() {
+                                let path = FileDialog::new()
+                                    .add_filter("GLTF Asset", &["glb", "gltf"])
                                     .set_directory("/")
                                     .pick_file();
                                 if let Some(path) = path {
@@ -234,11 +246,28 @@ impl App for Editor {
                             }
 
                             if ui.button("Save").clicked() {
-                                // TODO: Remove default light
-                                app_state
-                                    .world
-                                    .save("map.dga")
-                                    .expect("Failed to save world!");
+                                let path = FileDialog::new()
+                                    .add_filter("Dragonglass Asset", &["dga"])
+                                    .set_directory("/")
+                                    .save_file();
+
+                                if let Some(path) = path {
+                                    let mut query = <(Entity, &Selected)>::query();
+
+                                    let entities = query
+                                        .iter(&mut app_state.world.ecs)
+                                        .map(|(e, _)| *e)
+                                        .collect::<Vec<_>>();
+
+                                    for entity in entities.into_iter() {
+                                        app_state
+                                            .world
+                                            .remove_rigid_body(entity)
+                                            .expect("Failed to remove rigid body!");
+                                    }
+
+                                    app_state.world.save(&path).expect("Failed to save world!");
+                                }
                                 ui.close_menu();
                             }
 

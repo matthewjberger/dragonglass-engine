@@ -1,0 +1,7 @@
+[package]
+edition = "2021"
+name = "dragonglass_shader"
+version = "0.1.0"
+
+[dependencies]
+dragonglass_dependencies = {path = "../dragonglass_dependencies"}

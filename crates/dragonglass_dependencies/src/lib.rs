@@ -5,6 +5,7 @@ pub use egui;
 pub use egui_winit_platform;
 pub use env_logger;
 pub use epi;
+pub use glob;
 pub use gltf;
 pub use glutin;
 pub use image;

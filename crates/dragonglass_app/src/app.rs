@@ -108,7 +108,7 @@ pub fn run_application(mut app: impl App + 'static, config: &AppConfig) -> Resul
 
     let mut world = World::new()?;
 
-    let mut renderer = create_render_backend(&Backend::OpenGL, &context, inner_size)?;
+    let mut renderer = create_render_backend(&Backend::Vulkan, &context, inner_size)?;
 
     let mut input = Input::default();
     let mut system = System::new(inner_size);

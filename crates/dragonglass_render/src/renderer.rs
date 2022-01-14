@@ -6,14 +6,13 @@ use dragonglass_dependencies::{
 };
 use dragonglass_world::{Viewport, World};
 
-use crate::opengl::OpenGLRenderDevice;
+use crate::vulkan::VulkanRenderDevice;
 
 pub enum Backend {
-    OpenGL,
+    Vulkan,
 }
 
 pub trait Renderer {
-    fn cleanup(&mut self);
     fn render(
         &mut self,
         context: &ContextWrapper<PossiblyCurrent, Window>,
@@ -29,6 +28,7 @@ pub trait Renderer {
         context: &ContextWrapper<PossiblyCurrent, Window>,
         dimensions: PhysicalSize<u32>,
     );
+    fn cleanup(&mut self);
 }
 
 pub fn create_render_backend(
@@ -37,8 +37,8 @@ pub fn create_render_backend(
     dimensions: PhysicalSize<u32>,
 ) -> Result<Box<dyn Renderer>> {
     match backend {
-        Backend::OpenGL => {
-            let backend = OpenGLRenderDevice::new(context, dimensions)?;
+        Backend::Vulkan => {
+            let backend = VulkanRenderDevice::new()?;
             Ok(Box::new(backend) as Box<dyn Renderer>)
         }
     }

@@ -1,0 +1,11 @@
+[package]
+authors = ["Matthew J. Berger <matthewberger@nevada.unr.edu>"]
+edition = "2021"
+name = "dragonglass_vulkan"
+version = "0.1.0"
+
+[dependencies]
+dragonglass_dependencies = {path = "../dragonglass_dependencies"}
+
+[build-dependencies]
+dragonglass_dependencies = {path = "../dragonglass_dependencies"}

@@ -20,7 +20,7 @@ use dragonglass_dependencies::{
     rapier3d::{
         dynamics::{RigidBodyBuilder, RigidBodyType},
         geometry::{ColliderBuilder, InteractionGroups},
-        prelude::Ray,
+        prelude::{QueryFilter, Ray},
     },
     serde::{de::DeserializeSeed, Deserialize, Deserializer, Serialize, Serializer},
 };
@@ -542,12 +542,12 @@ impl World {
         let ray = self.mouse_ray(mouse_ray_configuration)?;
 
         let hit = self.physics.query_pipeline.cast_ray(
+            &self.physics.bodies,
             &self.physics.colliders,
             &ray,
             interact_distance,
             true,
-            groups,
-            None,
+            QueryFilter::from(groups),
         );
 
         let mut picked_entity = None;

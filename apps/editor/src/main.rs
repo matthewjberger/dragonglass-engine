@@ -89,7 +89,7 @@ impl Editor {
             for entity in entities.into_iter() {
                 app_state
                     .world
-                    .add_rigid_body(entity, RigidBodyType::Static)?;
+                    .add_rigid_body(entity, RigidBodyType::Fixed)?;
                 app_state
                     .world
                     .add_trimesh_collider(entity, InteractionGroups::all())?;

@@ -82,6 +82,7 @@ impl WorldPhysics {
             &mut self.colliders,
             &mut self.impulse_joints,
             &mut self.multibody_joints,
+            true,
         );
     }
 

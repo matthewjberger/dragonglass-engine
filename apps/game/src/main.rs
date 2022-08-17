@@ -57,7 +57,7 @@ impl App for Game {
         for entity in level_meshes.into_iter() {
             app_state
                 .world
-                .add_rigid_body(entity, RigidBodyType::Static)?;
+                .add_rigid_body(entity, RigidBodyType::Fixed)?;
             // add_box_collider(application, entity, LEVEL_COLLISION_GROUP)?;
             app_state
                 .world
